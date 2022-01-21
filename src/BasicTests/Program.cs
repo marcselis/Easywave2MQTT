@@ -2,8 +2,10 @@
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Client.Options;
+using System.Globalization;
+using System.IO.Ports;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 const string DISCOVERY_PREFIX = "homeassistant";
 const string TOPIC_DEVICETRIGGER_CONFIG = "<discovery_prefix>/device_automation/[<node_id>/]<object_id>/config";
@@ -16,20 +18,80 @@ const string TEMP_CLASS = "temperature";
 Console.WriteLine("Hello, World!");
 
 
-var button = new Button { Name = "Licht Slaapkamer ouders", UniqueId = "slk1", Device = new Device { Manufacturer = "Niko", Identifiers = new[] { "44554:0500" } } };
-var buttonConfig = JsonSerializer.Serialize(button);
+//var button = new Button { Name = "Licht Slaapkamer ouders", UniqueId = "slk1", Device = new Device(0x0002, "Niko", "1245", "Licht Slaapkamer ouders" ) };
+//var buttonConfig = JsonSerializer.Serialize(button);
 
-var sensorConfig = JsonSerializer.Serialize(new Temperature { Name = TEMP_NAME, DeviceClass = TEMP_CLASS, TopicState = TOPIC_STATE, UnitOfMeasure = "°C", Value = "{{value_json.temperature}}", Available = "online", NotAvailable = "offline" });
+//var sensorConfig = JsonSerializer.Serialize(new Temperature { Name = TEMP_NAME, DeviceClass = TEMP_CLASS, TopicState = TOPIC_STATE, UnitOfMeasure = "°C", Value = "{{value_json.temperature}}", Available = "online", NotAvailable = "offline" });
 var options = new MqttClientOptionsBuilder()
     .WithKeepAlivePeriod(TimeSpan.FromSeconds(1))
     .WithClientId("BasicTestClient")
     .WithTcpServer("192.168.0.12", 1883)
     .WithCredentials("mqtt", "mqtt").Build();
 var factory = new MqttFactory();
+Dictionary<uint, NikoButton> buttons = new Dictionary<uint, NikoButton>();
+
 using (var client = factory.CreateMqttClient())
 {
+    await client.ConnectAsync(options).ConfigureAwait(false);
 
-    await client.ConnectAsync(options);
+
+
+    var port = new SerialPort("COM4", 57600, Parity.None, 8, StopBits.One)
+    {
+        Handshake = Handshake.None,
+        DtrEnable = true,
+        RtsEnable = true,
+        NewLine = "\r"
+    };
+    //port.ErrorReceived += ErrorReceived;
+    port.DataReceived += async (sender, e) =>
+    {
+        async Task ProcessLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return;
+            }
+
+            var parts = line.Split(',', '\t');
+            if (parts.Length == 0)
+            {
+                return;
+            }
+
+            switch (parts[0])
+            {
+                //case "ID":
+                //    VendorId = parts[1];
+                //    DeviceId = parts[2];
+                //    Version = uint.Parse(parts[3], NumberStyles.HexNumber);
+                //    _log.Debug($"Reveived ID {VendorId}:{DeviceId} Version {Version}");
+                //    break;
+                //case "GETP":
+                //    AddressCount = uint.Parse(parts[1], NumberStyles.HexNumber);
+                //    _log.Debug($"Transceiver has {AddressCount} addresses");
+                //    break;
+                case "REC":
+                    var address = uint.Parse(parts[1], NumberStyles.HexNumber);
+                    var code = (KeyCode)Enum.Parse(typeof(KeyCode), parts[2]);
+                    if (!buttons.ContainsKey(address))
+                    {
+                        buttons.Add(address, (NikoButton)await client.DeclareDevice("Niko", "410-00001", address, address.ToString("X8")));
+                    }
+                    await buttons[address].HandleButton((int)code);
+                    break;
+                case "OK":
+                    break;
+                default:
+                    //   _log.Debug($"Unexpected input: {line}");
+                    break;
+            }
+        }
+
+        var port = (SerialPort)sender;
+        var line = port.ReadLine();
+        await ProcessLine(line).ConfigureAwait(false);
+    };
 
     //await client.PublishAsync(new MqttApplicationMessageBuilder()
     //    .WithTopic(TOPIC_TEMP_CONF)
@@ -44,95 +106,38 @@ using (var client = factory.CreateMqttClient())
     //    .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
     //    .WithRetainFlag(true).Build());
 
-    //{"automation_type":"trigger",
-    // "type":"action",
-    // "subtype":"arrow_left_click",
-    // "payload":"arrow_left_click",
-    // "topic":"zigbee2mqtt/0x90fd9ffffedf1266/action",
-    // "device":{"identifiers":["zigbee2mqtt_0x90fd9ffffedf1266"],"name":"0x90fd9ffffedf1266","sw_version":"Zigbee2mqtt 1.14.0","model":"TRADFRI remote control (E1524/E1810)","manufacturer":"IKEA"}}
-    var slk1Button = new Device() { Identifiers = new string[] { "easywave2mqtt_0x001" }, Manufacturer = "Niko", Model = "410-00001", Name = "Slaapkamer Ouders 1", SoftwareVersion = "Easywave2Mqtt 0.1 beta" };
-    var slk1_button1_short_press = new RootObject { AutomationType = "trigger", Type = "button_short_press", SubType = "button_1", Payload = "button_1_short_press", Topic = "easywave2mqtt/0x001/action", Device = slk1Button };
-    var payload = JsonSerializer.Serialize(slk1_button1_short_press);
-    await client.PublishAsync(new MqttApplicationMessageBuilder()
-        .WithTopic("homeassistant/device_automation/0x001/button_1_short_press/config")
-        .WithPayload(payload)
-        .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.ExactlyOnce)
-        .WithRetainFlag(false)
-        .Build());
+  //  var button = (NikoButton)await client.DeclareDevice("Niko", "410-00001", 0x0001, "Slaapkamer Ouders 1").ConfigureAwait(false);
 
-    var slk1_button1_long_press = new RootObject { AutomationType = "trigger", Type = "button_long_press", SubType = "button_1", Payload = "button_1_long_press", Topic = "easywave2mqtt/0x001/action", Device = slk1Button };
-    payload = JsonSerializer.Serialize(slk1_button1_long_press);
-    await client.PublishAsync(new MqttApplicationMessageBuilder()
-      .WithTopic("homeassistant/device_automation/0x001/button_1_long_press/config")
-      .WithPayload(payload)
-      .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.ExactlyOnce)
-      .WithRetainFlag(false)
-      .Build());
-
-    await client.DisconnectAsync();
+    Console.WriteLine("Press buttons 1 to 4 or q to exit");
+    ConsoleKeyInfo key;
+    do
+    {
+        key = Console.ReadKey(true);
+        //switch(key.Key)
+        //{
+        //    case ConsoleKey.D1:
+        //        await button.HandleButton(1);
+        //        break;
+        //    case ConsoleKey.D2:
+        //        await button.HandleButton(2);
+        //        break;
+        //    case ConsoleKey.D3:
+        //        await button.HandleButton(3);
+        //        break;
+        //    case ConsoleKey.D4:
+        //        await button.HandleButton(4);
+        //        break;
+        //}
+    }
+    while (key.Key != ConsoleKey.Q);
+    port.Close();
+    await client.DisconnectAsync().ConfigureAwait(false);
 }
 
-public class Button
+       public enum KeyCode
 {
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-    [JsonPropertyName("unique_id")]
-    public string? UniqueId { get; set; }
-
-    [JsonPropertyName("device")]
-    public Device? Device { get; set; }
-
-    [JsonPropertyName("command_topic")]
-    public string CommandTopic { get; set; }
+    A = 1,
+    B,
+    C,
+    D
 }
-
-public class Temperature
-{
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-    [JsonPropertyName("dev_cla")]
-    public string? DeviceClass { get; set; }
-    [JsonPropertyName("stat_t")]
-    public string? TopicState { get; set; }
-    [JsonPropertyName("unit_of_meas")]
-    public string? UnitOfMeasure { get; set; }
-    [JsonPropertyName("val_tpl")]
-    public string Value { get; set; }
-    [JsonPropertyName("payload_available")]
-    public string Available { get; set; }
-    [JsonPropertyName("pl_not_avail")]
-    public string NotAvailable { get; set; }
-}
-
-
-public class RootObject
-{
-    [JsonPropertyName("automation_type")]
-    public string AutomationType { get; set; }
-    [JsonPropertyName("type")]
-    public string Type { get; set; }
-    [JsonPropertyName("subtype")]
-    public string SubType { get; set; }
-    [JsonPropertyName("payload")]
-    public string Payload { get; set; }
-    [JsonPropertyName("topic")]
-    public string Topic { get; set; }
-    [JsonPropertyName("device")]
-    public Device Device { get; set; }
-}
-
-public class Device
-{
-    [JsonPropertyName("identifiers")]
-    public string[] Identifiers { get; set; }
-    [JsonPropertyName("name")]
-    public string Name { get; set; }
-    [JsonPropertyName("sw_version")]
-    public string SoftwareVersion { get; set; }
-    [JsonPropertyName("model")]
-    public string Model { get; set; }
-    [JsonPropertyName("manufacturer")]
-    public string Manufacturer { get; set; }
-}
-
-
