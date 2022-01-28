@@ -10,11 +10,15 @@ namespace Easywave2Mqtt
 
   internal static class Program
   {
+    public static Settings? Settings { get; set; }
+
     public static void Main(string[] args)
     {
       try
       {
-        CreateHostBuilder(args).Build().Run();
+        var app = CreateHostBuilder(args).Build();
+        Settings = app.Services.GetRequiredService<Settings>();
+        app.Run();
       }
       catch (OperationCanceledException)
       {
@@ -25,6 +29,8 @@ namespace Easywave2Mqtt
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
       IHostBuilder? builder = Host.CreateDefaultBuilder(args);
+      //Support this program to be registered as a service in Windows or Linux.
+      //This is not actually needed when running this program as a Home Assistant add-on, as it will be running as a Console application in a Docker container then.
       switch (Environment.OSVersion.Platform)
       {
         case PlatformID.Unix:

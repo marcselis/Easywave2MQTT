@@ -1,7 +1,0 @@
-name: Easywave2MQTT
-description: Support Easywave devices in Home Assistant using MQTT
-version: 0.1.0
-slug: easywave2mqtt
-arch:
-  - aarch64
-usb: true

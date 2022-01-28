@@ -15,16 +15,20 @@ namespace Easywave2Mqtt.Mqtt
 
   public partial class MessagingService : BackgroundService
   {
-    private static readonly IMqttClientOptions Options = new MqttClientOptionsBuilder().WithKeepAlivePeriod(TimeSpan.FromSeconds(60))
-                                                                                       .WithClientId("BasicTestClient")
-                                                                                       .WithTcpServer("192.168.0.12", 1883)
-                                                                                       .WithCredentials("mqtt", "mqtt")
-                                                                                       .WithCommunicationTimeout(TimeSpan.FromSeconds(30))
-                                                                                       .Build();
+    private static readonly IMqttClientOptions Options;
     private readonly IBus _bus;
     private readonly IMqttClient _client;
     private readonly ILogger<MessagingService> _logger;
 
+    static MessagingService()
+    {
+      Options = new MqttClientOptionsBuilder().WithKeepAlivePeriod(TimeSpan.FromSeconds(60))
+                                              .WithClientId("Easywave2MQTT")
+                                              .WithTcpServer(Program.Settings!.MQTTServer, Program.Settings!.MQTTPort)
+                                              .WithCredentials(Program.Settings!.MQTTUser, Program.Settings!.MQTTPassword)
+                                              .WithCommunicationTimeout(TimeSpan.FromSeconds(30))
+                                              .Build();
+    }
     public MessagingService(ILogger<MessagingService> logger, IBus bus)
     {
       _logger = logger;
@@ -213,7 +217,7 @@ namespace Easywave2Mqtt.Mqtt
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "MQTT service is stopping...")]
     public partial void LogServiceStop();
-    
+
     [LoggerMessage(EventId = 3, Level = LogLevel.Debug, Message = "Topic {Topic} received with payload {Payload}")]
     public partial void LogTopicReceived(string topic, string payload);
 
