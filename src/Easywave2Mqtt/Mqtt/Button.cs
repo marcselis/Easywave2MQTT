@@ -24,7 +24,7 @@ namespace Easywave2Mqtt.Mqtt
         [JsonPropertyName("availability")]
         public Availability Availability { get; set; }
 
-        public Button(string id, char btn, string name, string?  area, string eventName, int count)
+        public Button(string id, char btn, string name, string? area, string eventName, int count)
         {
             Id = id + btn;
             Availability = new Availability();

@@ -9,11 +9,11 @@ namespace Easywave2Mqtt.Easywave
 
         public EasywaveTransmitter(string id, string name, string? area, int count, ILogger<EasywaveTransmitter> logger)
         {
-            Id=id;
+            Id = id;
             Name = name;
             Area = area;
             Count = count;
-            _logger=logger??throw new ArgumentNullException(nameof(logger));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public string Id { get; }

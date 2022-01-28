@@ -8,11 +8,11 @@ namespace Easywave2Mqtt.Mqtt
 
         public Device(string id, string manufacturer, string model, string name)
         {
-            SoftwareVersion=Version;
-            Manufacturer=manufacturer;
-            Model=model;
-            Name=name;
-            Identifiers=new[] { $"easywave2mqtt_{id}" };
+            SoftwareVersion = Version;
+            Manufacturer = manufacturer;
+            Model = model;
+            Name = name;
+            Identifiers = new[] { $"easywave2mqtt_{id}" };
         }
 
         [JsonPropertyName("identifiers")]

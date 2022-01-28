@@ -8,7 +8,7 @@ namespace Easywave2Mqtt.Tools
 
         public async Task PublishAsync<T>(T message)
         {
-            foreach(ISubscription sub in _subscriptions[typeof(T)])
+            foreach (ISubscription sub in _subscriptions[typeof(T)])
             {
                 if (sub is ISubscription<T> subscription)
                 {
@@ -19,16 +19,16 @@ namespace Easywave2Mqtt.Tools
 
         public ISubscription<T> Subscribe<T>(Func<T, Task> handler)
         {
-            var type = typeof(T);
+            Type? type = typeof(T);
             var subscription = new Subscription<T>(this, handler);
-            var list = _subscriptions.GetOrAdd(type, (_) => new List<ISubscription>());
+            IList<ISubscription>? list = _subscriptions.GetOrAdd(type, (_) => new List<ISubscription>());
             list.Add(subscription);
             return subscription;
         }
 
         private void Remove<T>(ISubscription subscription)
         {
-            _=_subscriptions[typeof(T)].Remove(subscription);
+            _ = _subscriptions[typeof(T)].Remove(subscription);
         }
 
         private class Subscription<T> : ISubscription<T>
@@ -38,8 +38,8 @@ namespace Easywave2Mqtt.Tools
 
             public Subscription(Bus parent, Func<T, Task> handler)
             {
-                _parent=parent;
-                _handler=handler;
+                _parent = parent;
+                _handler = handler;
             }
 
             public void Dispose()

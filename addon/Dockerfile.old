@@ -1,0 +1,19 @@
+ARG BUILD_FROM
+FROM $BUILD_FROM
+
+# Install .NET dependencies
+RUN \
+    set -x \
+    apk add --no-cache --virtual libgcc1 libstdc++6 
+#    apk add libicu60 \
+#    apk add liblttng-ust0 \
+#    apk add libssl1.0.0 \
+#    apk add libstdc++6 zlib1g
+# Copy data for add-on
+ADD artifacts.tar.gz /app
+COPY run.sh /
+
+RUN chmod a+x /run.sh
+RUN chmod a+x /app/Easywave2Mqtt
+
+CMD [ "/bin/bash", "/run.sh" ]

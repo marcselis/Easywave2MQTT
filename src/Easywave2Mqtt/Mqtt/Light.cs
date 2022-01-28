@@ -30,18 +30,18 @@ namespace Easywave2Mqtt.Mqtt
 
         public Light(string id, string name, string? area)
         {
-            if(id.Length>6)
+            if (id.Length > 6)
             {
                 throw new ArgumentOutOfRangeException(nameof(id), "Maximum size is 6 characters");
             }
-            Id=id;
-            Name=name;
-            Area=area;
-            StateTopic=$"easywave2mqtt/{id}/state";
-            CommandTopic=$"mqtt2easywave/{id}/set";
-            PayloadOn="on";
-            PayloadOff="off";
-            Device=new Device(id, "Niko", "Easywave Switch", name);
+            Id = id;
+            Name = name;
+            Area = area;
+            StateTopic = $"easywave2mqtt/{id}/state";
+            CommandTopic = $"mqtt2easywave/{id}/set";
+            PayloadOn = "on";
+            PayloadOff = "off";
+            Device = new Device(id, "Niko", "Easywave Switch", name);
             Availability = new Availability();
         }
     }

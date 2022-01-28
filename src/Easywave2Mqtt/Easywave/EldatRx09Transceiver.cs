@@ -147,7 +147,7 @@ namespace Easywave2Mqtt.Easywave
 
         private EasywaveTelegram Parse(string line)
         {
-            var result = EasywaveTelegram.Empty;
+            EasywaveTelegram? result = EasywaveTelegram.Empty;
             LogMethodStart1(line);
             ReadOnlySpan<char> span = line.AsSpan();
             if (span[0..2].CompareTo("OK", StringComparison.Ordinal) == 0)
@@ -164,7 +164,7 @@ namespace Easywave2Mqtt.Easywave
             {
                 var address = new string(span[4..10]);
                 var button = span[11];
-                result= new EasywaveTelegram(address, button);
+                result = new EasywaveTelegram(address, button);
             }
             else if (span[0..4].CompareTo("GETP", StringComparison.Ordinal) == 0)
             {
@@ -179,10 +179,10 @@ namespace Easywave2Mqtt.Easywave
 
         #region Logging Methods
 
-        [LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "EldatRx09Transceiver service is starting...")]
+        [LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "Easywave service is starting...")]
         public partial void LogServiceStart();
 
-        [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "EldatRx09Transceiver service is stopping...")]
+        [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Easywave service is stopping...")]
         public partial void LogServiceStop();
 
         [LoggerMessage(EventId = 2, Level = LogLevel.Debug, Message = "Sent {Line}")]

@@ -4,8 +4,8 @@
     {
         public DeclareButton(string address, char keyCode, string name, string? area, int count)
         {
-            Address=address;
-            KeyCode=keyCode;
+            Address = address;
+            KeyCode = keyCode;
             Name = name;
             Area = area;
             Count = count;

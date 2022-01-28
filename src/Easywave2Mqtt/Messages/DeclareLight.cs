@@ -4,8 +4,8 @@
     {
         public DeclareLight(string id, string name, string? area)
         {
-            Id=id;
-            Name=name;
+            Id = id;
+            Name = name;
             Area = area;
         }
 

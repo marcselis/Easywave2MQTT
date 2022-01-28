@@ -8,7 +8,7 @@ namespace Easywave2Mqtt.Configuration
     {
         [EnumMember(Value = "unknown")]
         Unknown,
-        [EnumMember(Value="light")]
+        [EnumMember(Value = "light")]
         Light,
         [EnumMember(Value = "transmitter")]
         Transmitter

@@ -4,7 +4,7 @@
     {
         public EasywaveSwitchTurnedOn(string id)
         {
-            Id=id;
+            Id = id;
         }
 
         public string Id { get; }

@@ -1,22 +1,19 @@
 ﻿using System.Diagnostics;
 using System.Timers;
+using Timer = System.Timers.Timer;
 
 namespace Easywave2Mqtt.Easywave
 {
+
     public partial class EasywaveButton : IEasywaveDevice, IDisposable
     {
         private const int RepeatTimeout = 80;
         private const int PressTimeout = 500;
-        private readonly System.Timers.Timer _pressTimer;
-        private readonly Stopwatch _stopwatch = new();
-        private int _repeat;
-        private int _pressCounter;
         private readonly ILogger<EasywaveButton> _logger;
-        public event ButtonEvent? Pressed;
-        public event ButtonEvent? DoublePressed;
-        public event ButtonEvent? TriplePressed;
-        public event ButtonEvent? Held;
-        public event ButtonEvent? Released;
+        private readonly Timer _pressTimer;
+        private readonly Stopwatch _stopwatch = new();
+        private int _pressCounter;
+        private int _repeat;
 
         internal EasywaveButton(string id, char keyCode, string name, string? area, ILogger<EasywaveButton> logger)
         {
@@ -25,48 +22,62 @@ namespace Easywave2Mqtt.Easywave
             Name = name;
             Area = area;
             _logger = logger;
-            _pressTimer = new System.Timers.Timer(PressTimeout);
+            _pressTimer = new Timer(PressTimeout);
             _pressTimer.Elapsed += SendPush;
             _pressTimer.AutoReset = false;
         }
 
-        public string Id { get; }
         public char KeyCode { get; }
         public string Name { get; }
         public string? Area { get; }
+
+        public void Dispose()
+        {
+            _pressTimer.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        public string Id { get; }
 
         public Task HandleCommand(string command)
         {
             return Task.CompletedTask;
         }
 
+        public event ButtonEvent? Pressed;
+        public event ButtonEvent? DoublePressed;
+        public event ButtonEvent? TriplePressed;
+        public event ButtonEvent? Held;
+        public event ButtonEvent? Released;
+
         /// <summary>
-        /// Handles the detection of a easywave button press
+        ///     Handles the detection of a easywave button press
         /// </summary>
         /// <remarks>
-        /// Easywave has a bad habit of sending up to 4 messages when a user presses a button.
-        /// This method attempts to ignore those repeated messages and parse the incoming stream of button press messages to detect the users intention:
-        ///  - A single press
-        ///  - A double press
-        ///  - A triple press
-        ///  - Holding the button
-        ///  - Releasing the button
+        ///     Easywave has a bad habit of sending up to 4 messages when a user presses a button.
+        ///     This method attempts to ignore those repeated messages and parse the incoming stream of button press messages to
+        ///     detect the users intention:
+        ///     - A single press
+        ///     - A double press
+        ///     - A triple press
+        ///     - Holding the button
+        ///     - Releasing the button
         /// </remarks>
         internal async Task HandlePress()
         {
             var elapsed = _stopwatch.ElapsedMilliseconds;
             LogHandleButtonPressStart(KeyCode, elapsed);
             _stopwatch.Restart();
-            if(!_pressTimer.Enabled)
+            if (!_pressTimer.Enabled)
             {
                 //The very first time this method receives a press event, the press timeout timer & the stopwatch are not yet active.
                 //That is why we fake that the elapsed time is longer than the time we detect (and ignore) a repeated message, so that the message is processed
                 //and the timers are started.
                 elapsed = RepeatTimeout + 1;
             }
-            if(elapsed < RepeatTimeout)
+            if (elapsed < RepeatTimeout)
             {
-                if(IncreaseRepeat() < 5)
+                if (IncreaseRepeat() < 5)
                 {
                     LogHandleButtonPressEnd(KeyCode);
                     return;
@@ -87,7 +98,7 @@ namespace Easywave2Mqtt.Easywave
 
         private async Task SendHold()
         {
-            if(Held != null)
+            if (Held != null)
             {
                 await Held(this).ConfigureAwait(false);
             }
@@ -98,28 +109,28 @@ namespace Easywave2Mqtt.Easywave
         {
             LogSendPushStart();
             _pressTimer.Stop();
-            switch(_pressCounter)
+            switch (_pressCounter)
             {
                 case 0:
-                    if(Released != null)
+                    if (Released != null)
                     {
                         await Released(this);
                     }
                     break;
                 case 1:
-                    if(Pressed != null)
+                    if (Pressed != null)
                     {
                         await Pressed(this).ConfigureAwait(false);
                     }
                     break;
                 case 2:
-                    if(DoublePressed != null)
+                    if (DoublePressed != null)
                     {
                         await DoublePressed(this).ConfigureAwait(false);
                     }
                     break;
                 default:
-                    if(TriplePressed != null)
+                    if (TriplePressed != null)
                     {
                         await TriplePressed(this).ConfigureAwait(false);
                     }
@@ -155,12 +166,6 @@ namespace Easywave2Mqtt.Easywave
             _repeat = 0;
         }
 
-        public void Dispose()
-        {
-            _pressTimer.Dispose();
-            GC.SuppressFinalize(this);
-        }
-
         [LoggerMessage(EventId = 4, Level = LogLevel.Trace, Message = "  -->HandlePress {KeyCode} ({ElapsedTime} elapsed)")]
         public partial void LogHandleButtonPressStart(char keyCode, long elapsedTime);
 
@@ -185,4 +190,5 @@ namespace Easywave2Mqtt.Easywave
         [LoggerMessage(EventId = 12, Level = LogLevel.Debug, Message = "    Resetting repeat counter")]
         public partial void LogResetRepeatCounter();
     }
+
 }

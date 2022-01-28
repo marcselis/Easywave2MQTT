@@ -1,18 +1,18 @@
 {
   "profiles": {
-    "WorkerService1": {
-      "commandName": "Project",
-      "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
-      },
-      "dotnetRunMessages": true
-    },
     "WSL": {
       "commandName": "WSL2",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
       "distributionName": ""
+    },
+    "Easywave2Mqtt": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true
     }
   }
 }

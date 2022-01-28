@@ -4,9 +4,9 @@
     {
         public EasywaveSubscription(string address, char keyCode, bool canSend = false)
         {
-            Address=address;
-            KeyCode=keyCode;
-            CanSend=canSend;
+            Address = address;
+            KeyCode = keyCode;
+            CanSend = canSend;
         }
 
         public string Address { get; }

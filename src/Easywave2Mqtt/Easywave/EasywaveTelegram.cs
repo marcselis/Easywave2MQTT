@@ -6,8 +6,8 @@
 
         public EasywaveTelegram(string address, char keyCode)
         {
-            Address=address;
-            KeyCode=keyCode;
+            Address = address;
+            KeyCode = keyCode;
         }
 
         public string Address { get; }

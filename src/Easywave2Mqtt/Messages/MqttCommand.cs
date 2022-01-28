@@ -4,8 +4,8 @@
     {
         public MqttCommand(string address, string command)
         {
-            Address=address;
-            Command=command;
+            Address = address;
+            Command = command;
         }
 
         public string Address { get; }
