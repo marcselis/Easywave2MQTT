@@ -1,9 +1,10 @@
 # Easywave2MQTT: Easywave support for [Home Assistant](https://www.home-assistant.io/).
+
 I started this project because I have [Niko](https://www.niko.eu/) Easywave devices in my house, but wanted to automate them with [Home Assistant](https://www.home-assistant.io/).  [Home Assistant](https://www.home-assistant.io/) has no built-in support for Easywave, but is very extensible and easy to interface with via its [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/).
 
 I chose for this approach over a native integration because you have to write those in Python and I am more a C# guy :smiley:. Since .NET 5 you can program in C# for Linux, which means also for [Home Assistant OS on Raspberry PI](https://www.home-assistant.io/installation/raspberrypi).
 
-**This project is a work-in-progress that I work on in my free time.**
+**This project is a work-in-progress that I work on in my free time.**  The current version is usable, but requires some manual work to get it to work.  Check the [Installing as Home Assistant Add-On](#installing-as-home-assistant-add-on) section for more information.
 
 ## What is Easywave?
 
@@ -57,7 +58,7 @@ This program has 4 main parts:
 
 ## Getting started
 
-### Building & Debugging
+### Debugging
 
 - Check that you have the following tools available:
 
@@ -65,6 +66,27 @@ This program has 4 main parts:
   - A code editor, like [Visual Studio Code](https://code.visualstudio.com/) or [Visual Studio](https://visualstudio.microsoft.com/), if you want to make changes.
   - Update the contents of the `appsettings.json` file.  See the [Configuration Section](#configuration) for more information.
 - You should be able to test and debug this project under both Windows & Linux without any code changes.
+
+### Installing as Home Assistant Add-On
+
+For now, this step requires some manual actions:
+
+1) Update settings to match your current set-up.  See [Configuration Section](#configuration) for more information.
+1) Build the solution in `Release` mode.
+1) tar & gzip the contents of the `src\Easywave2Mqtt\bin\Release\net6.0` folder and name the resulting file `app.tar.gz`.
+1) Move that file to the `addon\Easywave2MQTT` folder.
+1) Fix the device path in the `config.yaml` file to match the path of the Eldat USB receiver in your Home Assistant machine.
+1) Copy the `Easywave2MQTT` folder in the `addon` folers to the `addons` share of Home Assistant.
+1) Go to Home Assistant and open the Home Assitant Add-on Store.
+1) In the top righthand corner, press the Menu button (the one with the 3 dots).
+1) Choose `Reload`.
+1) The add-on should become visible after a few seconds under the topic `Local add-ons`.
+1) Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
+1) Press `Start` to start the add-on.
+1) After a few seconds, check the logs and scroll to the bottom.
+   There should be a line saying the Eldat Transceiver was detected.
+
+**Good luck!**
 
 ## Configuration
 
@@ -86,3 +108,15 @@ For now, the configuration is done through the `appsettings.json` file.
     - **released**: the button was released after being held.
   - **Optional**: Declare the receivers and the transmitter buttons you have them linked to.  Doing so will allow these receivers and their current state to be synchronized to Home Assistant.  
   If you want to make it possible to control your receivers from Home Assistant, you'll need to manually link them to an RX09 message and add that message as a subscription with `CanSend: "true"`.
+
+## TODO
+
+- Find out how avoid the need to alter the `config.yaml` file to be able to access the USB device.
+- Add a Web GUI to allow you to configure Easywave devices.
+
+## How to contribute?
+
+I accept tips, ideas or new feature requests, but please bear in mind that I work on this project in my free time, so I can't make any promises on their acceptance & timings.
+
+I'm happy to accept pull requests.
+
