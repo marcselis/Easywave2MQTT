@@ -15,5 +15,10 @@ namespace Easywave2Mqtt.Configuration
     public string? MQTTPassword { get; set; }
 
     public Collection<Device> Devices { get; set; } = new Collection<Device>();
+
+    public Settings(IConfiguration configuration)
+    {
+      configuration.Bind("Settings",this);
+    }
   }
 }

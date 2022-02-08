@@ -2,7 +2,7 @@
 
 namespace Easywave2Mqtt.Easywave
 {
-    public partial class EasywaveTransmitter : IEasywaveDevice
+    public partial class EasywaveTransmitter : IEasywaveTransmitter
     {
         private readonly ILogger<EasywaveTransmitter> _logger;
         private readonly ConcurrentDictionary<char, EasywaveButton> _buttons = new();
@@ -47,5 +47,10 @@ namespace Easywave2Mqtt.Easywave
         {
             _buttons[button.KeyCode] = button;
         }
+
+    public bool HasButton(char button)
+    {
+      return _buttons.ContainsKey(button);
     }
+  }
 }

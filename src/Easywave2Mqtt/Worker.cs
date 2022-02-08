@@ -4,6 +4,7 @@ using Easywave2Mqtt.Easywave;
 using Easywave2Mqtt.Events;
 using Easywave2Mqtt.Messages;
 using Easywave2Mqtt.Tools;
+using Microsoft.EntityFrameworkCore;
 
 namespace Easywave2Mqtt
 {
@@ -13,16 +14,18 @@ namespace Easywave2Mqtt
     private readonly IBus _bus;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Settings _config;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<string, IEasywaveDevice> _devices = new();
     private readonly ILogger<Worker> _logger;
     private readonly ILoggerFactory _loggerFactory;
 
-    public Worker(IBus bus, ILoggerFactory loggerFactory, Settings config)
+    public Worker(IBus bus, ILoggerFactory loggerFactory, Settings config, IServiceProvider serviceProvider)
     {
       _logger = loggerFactory.CreateLogger<Worker>();
       _bus = bus;
       _loggerFactory = loggerFactory;
       _config = config;
+      _serviceProvider = serviceProvider;
     }
 
     private async Task HandleMqttCommand(MqttCommand command)
@@ -84,6 +87,8 @@ namespace Easywave2Mqtt
         using (_bus.Subscribe<EasywaveTelegram>(HandleEasywaveEvent))
         using (_bus.Subscribe<MqttCommand>(HandleMqttCommand))
         using (_bus.Subscribe<MqttMessage>(HandleMqttMessage))
+        using (_bus.Subscribe<TransmitterAdded>(HandleTransmitterAdded))
+        using (_bus.Subscribe<ReceiverAdded>(HandleReceiverAdded))
         {
           while (!_cancellationTokenSource.IsCancellationRequested)
           {
@@ -95,61 +100,98 @@ namespace Easywave2Mqtt
       LogExecuteAsyncEnd();
     }
 
+    private Task HandleTransmitterAdded(TransmitterAdded msg)
+    {
+      return AddNewTransmitter(msg.Id, msg.Name, msg.Area, msg.Buttons);
+    }
+
+    private Task HandleReceiverAdded(ReceiverAdded msg)
+    {
+      return AddNewLight(msg.Id, msg.Name, msg.Area, msg.IsToggle, msg.ListensTo);
+    }
+
+
     private async Task CreateDevices()
     {
-      foreach (Device device in _config.Devices)
+      using (var scope = _serviceProvider.CreateAsyncScope())
       {
-        var id = device.Id ?? throw new Exception("Device without Id found in settings");
-        switch (device.Type)
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        foreach (Device device in context.Devices.AsNoTracking())
         {
-          case DeviceType.Light:
+          var id = device.Id ?? throw new Exception("Device without Id found in settings");
+          switch (device.Type)
           {
-            var name = device.Name ?? $"Light {device.Name}";
-            EasywaveSwitch? light = await AddLight(id, name, device.Area, device.IsToggle);
-            foreach (Subscription sub in device.Subscriptions)
+            case DeviceType.Light:
             {
-              var address = sub.Address ?? throw new Exception($"Device {id} has a subscription without address");
-              if (sub.CanSend)
-              {
-                light.AddSubscription(address, sub.KeyCode, true);
-              }
-              else
-              {
-                Device? transmitter = _config.Devices.FirstOrDefault(d => d.Type == DeviceType.Transmitter && d.Id == address);
-                if (transmitter == null)
-                {
-                  throw new Exception($"Device {id} has a subscription for a non-existing device {address}");
-                }
-                if (transmitter.Buttons.Contains(sub.KeyCode))
-                {
-                  light.AddSubscription(address, sub.KeyCode);
-                }
-                else
-                {
-                  throw new Exception($"Device {id} has a subscription for a non-existing button {sub.KeyCode} on transmitter {address}");
-                }
-              }
+              await AddNewLight(device.Id, device.Name, device.Area, device.IsToggle, device.ListensTo).ConfigureAwait(false);
+              break;
             }
-            break;
-          }
-          case DeviceType.Transmitter:
-          {
-            var name = device.Name ?? $"Transmitter {device.Name}";
-            EasywaveTransmitter? transmitter = await AddTransmitter(id, name, device.Area, device.Buttons.Count);
-            var count = device.Buttons.Count;
-            foreach (var button in device.Buttons)
+            case DeviceType.Transmitter:
             {
-              transmitter.AddButton(await AddButton(id, button, name, device.Area, count).ConfigureAwait(false));
+              await AddNewTransmitter(device.Id, device.Name, device.Area, device.Buttons).ConfigureAwait(false);
+              break;
             }
-            break;
+            default:
+              throw new NotSupportedException($"Device {device.Id} has an unsupported type {device.Type}");
           }
-          default:
-            throw new NotSupportedException($"Device {device.Id} has an unsupported type {device.Type}");
         }
       }
     }
 
-    private async Task<EasywaveSwitch> AddLight(string id, string? name, string? area, bool isToggle)
+    public async Task AddNewTransmitter(string id, string? name, string? area, string? buttons)
+    {
+      if (string.IsNullOrWhiteSpace(name))
+      {
+        name = $"Transmitter {id}";
+      }
+      if (string.IsNullOrWhiteSpace(buttons))
+      {
+        throw new Exception($"Transmitter {id} {name} has no buttons defined");
+      }
+      EasywaveTransmitter? transmitter = await CreateTransmitter(id, name, area, buttons.Length);
+      var count = buttons.Length;
+      foreach (var button in buttons)
+      {
+        transmitter.AddButton(await AddButton(id, button, name, area, count).ConfigureAwait(false));
+      }
+    }
+
+    private async Task AddNewLight(string id, string? name, string? area, bool isToggle, IEnumerable<ListensTo>? subscriptions)
+    {
+      if (string.IsNullOrWhiteSpace(name))
+      {
+        name = $"Light {id}";
+      }
+      EasywaveSwitch light = await CreateLight(id, name, area, isToggle);
+      if (subscriptions != null)
+      {
+        foreach (var sub in subscriptions)
+        {
+          var address = sub.Address ?? throw new Exception($"Device {id} has a subscription without address");
+          if (sub.CanSend)
+          {
+            light.AddSubscription(address, sub.KeyCode, true);
+          }
+          else
+          {
+            if (_devices.Values.FirstOrDefault(d => d.Id == address) is not IEasywaveTransmitter transmitter)
+            {
+              throw new Exception($"Device {id} has a subscription for a non-existing transmitter with id {address}");
+            }
+            if (transmitter.HasButton(sub.KeyCode))
+            {
+              light.AddSubscription(address, sub.KeyCode);
+            }
+            else
+            {
+              throw new Exception($"Device {id} has a subscription for a non-existing button {sub.KeyCode} on transmitter {address}");
+            }
+          }
+        }
+      }
+    }
+
+    private async Task<EasywaveSwitch> CreateLight(string id, string? name, string? area, bool isToggle)
     {
       var switchName = name ?? $"Lamp {id}";
       var newSwitch = new EasywaveSwitch(id, switchName, isToggle, _loggerFactory.CreateLogger<EasywaveSwitch>());
@@ -165,7 +207,7 @@ namespace Easywave2Mqtt
       return _bus.PublishAsync(new SendEasywaveCommand(address, keyCode));
     }
 
-    private Task<EasywaveTransmitter> AddTransmitter(string id, string name, string? area, int count)
+    private Task<EasywaveTransmitter> CreateTransmitter(string id, string name, string? area, int count)
     {
       var transmitter = new EasywaveTransmitter(id, name, area, count, _loggerFactory.CreateLogger<EasywaveTransmitter>());
       AddDevice(transmitter);

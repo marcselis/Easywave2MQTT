@@ -10,4 +10,11 @@
     {
         Task HandleEvent(string address, char keyCode, string action);
     }
+
+  public interface IEasywaveTransmitter : IEasywaveDevice
+  {
+    bool HasButton(char button);
+
+  }
+
 }
