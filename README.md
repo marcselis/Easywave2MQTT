@@ -76,7 +76,7 @@ For now, this step requires some manual actions:
 1) tar & gzip the contents of the `src\Easywave2Mqtt\bin\Release\net6.0` folder and name the resulting file `app.tar.gz`.
 1) Move that file to the `addon\Easywave2MQTT` folder.
 1) Fix the device path in the `config.yaml` file to match the path of the Eldat USB receiver in your Home Assistant machine.
-1) Copy the `Easywave2MQTT` folder in the `addon` folers to the `addons` share of Home Assistant.
+1) Copy the `Easywave2MQTT` folder from `addon` folder to the `addons` share of Home Assistant.
 1) Go to Home Assistant and open the Home Assitant Add-on Store.
 1) In the top righthand corner, press the Menu button (the one with the 3 dots).
 1) Choose `Reload`.
