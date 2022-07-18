@@ -1,8 +1,7 @@
 FROM mcr.microsoft.com/dotnet/runtime:6.0
 # Copy data for add-on
 ADD app.tar.gz /app
-COPY run.sh /
 
-RUN chmod a+x /run.sh
+WORKDIR /app
 
-CMD [ "/bin/bash", "/run.sh" ]
+ENTRYPOINT [ "dotnet", "Easywave2Mqtt.dll" ]
