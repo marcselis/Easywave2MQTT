@@ -3,7 +3,9 @@
     "Easywave2Mqtt": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
+        "DOTNET_ENVIRONMENT": "Development",
+        "LOGLEVEL": "Verbose",
+        "SERIALPORT": "COM1"
       },
       "dotnetRunMessages": true
     },

@@ -1,4 +1,4 @@
-﻿namespace Easywave2Mqtt.Messages
+﻿namespace Tools.Messages
 {
   public class SendEasywaveCommand
   {

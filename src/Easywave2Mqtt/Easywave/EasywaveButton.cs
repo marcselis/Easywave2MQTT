@@ -118,7 +118,7 @@ namespace Easywave2Mqtt.Easywave
         case 0:
           if (Released != null)
           {
-            await Released(this);
+            await Released(this).ConfigureAwait(false);
           }
           break;
         case 1:

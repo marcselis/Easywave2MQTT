@@ -1,5 +1,4 @@
 #!/usr/bin/with-contenv bashio
-uname -a
-cat /etc/os-release
+cp /data/options.json /app/
 cd /app
 dotnet Easywave2Mqtt.dll

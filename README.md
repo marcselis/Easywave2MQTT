@@ -58,11 +58,20 @@ This program has 4 main parts:
 
 ## Getting started
 
+It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some advanced tinkering.  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistent.
+
+So, for now, the only way to do it, is to manually alter the contents of the `appsettings.json` file that is embedded in the `addon/Easywave2MQTT/app.tar.gz` archive.
+Extract the appsettings.json file from that archive, and alter the `Devices` setting according to your setup.  My setup is available as a reference, to help you figure out what configuration is needed.  See the [Configuration]()
+
+
+
+## Advanced Topics
+
 ### Debugging
 
 - Check that you have the following tools available:
 
-  - [.NET 6.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+  - [.NET 7.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
   - A code editor, like [Visual Studio Code](https://code.visualstudio.com/) or [Visual Studio](https://visualstudio.microsoft.com/), if you want to make changes.
   - Update the contents of the `appsettings.json` file.  See the [Configuration Section](#configuration) for more information.
 - You should be able to test and debug this project under both Windows & Linux without any code changes.
@@ -72,46 +81,49 @@ This program has 4 main parts:
 For now, this step requires some manual actions:
 
 1) Update settings to match your current set-up.  See [Configuration Section](#configuration) for more information.
-1) Build the solution in `Release` mode.
-1) tar & gzip the contents of the `src\Easywave2Mqtt\bin\Release\net6.0` folder and name the resulting file `app.tar.gz`.
-1) Move that file to the `addon\Easywave2MQTT` folder.
-1) Fix the device path in the `config.yaml` file to match the path of the Eldat USB receiver in your Home Assistant machine.
-1) Copy the `Easywave2MQTT` folder from `addon` folder to the `addons` share of Home Assistant.
-1) Go to Home Assistant and open the Home Assitant Add-on Store.
-1) In the top righthand corner, press the Menu button (the one with the 3 dots).
-1) Choose `Reload`.
-1) The add-on should become visible after a few seconds under the topic `Local add-ons`.
-1) Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
-1) Press `Start` to start the add-on.
-1) After a few seconds, check the logs and scroll to the bottom.
+2) Build the solution in `Release` mode.
+3) Publish the Easywave2Mqtt project to the folder `src\Easywave2Mqtt\bin\Release\net7.0\publish`.
+4) tar & gzip the contents of the `src\Easywave2Mqtt\bin\Release\net7.0\publish` folder and name the resulting file `app.tar.gz`.
+5) Move that file to the `addon\Easywave2MQTT` folder.
+6) Copy the `Easywave2MQTT` folder from `addon` folder to the `addons` share of Home Assistant.
+7) Go to Home Assistant and open the Home Assitant Add-on Store.
+8) In the top righthand corner, press the Menu button (the one with the 3 dots).
+9) Choose `Check for updates`.
+10) The add-on should become visible after a few seconds under the topic `Local add-ons`.
+11) Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
+12) Swith to the `Configuration` tab in the top and fix the `serialport` & `mqtt` settings to match your setup.
+13) Press `Save` in the bottom-right to save your settings.
+14) Switch back to the `Information` tab in the top, and press `(Re)Start` to start the add-on.
+15) After a few seconds, check the logs and scroll to the bottom.
    There should be a line saying the Eldat Transceiver was detected.
 
 **Good luck!**
 
 ## Configuration
 
-For now, the configuration is done through the `appsettings.json` file.
+The following settings from the `appsettings.json` file are overriden by the addon configuration, and should not be altered.
 
+- `LogLevel`: the level at wich the addon should log its progress.
 - `SerialPort`: the device where your [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) can be found.  (e.g. `COM1` in Windows, `/dev/ttyUSB0` in Linux)
 - `EasywaveActionTimeout` determines how many milliseconds to wait before concluding that an Easywave button action is finished.
 - `EasywaveRepeatTimeout` determines within how many milliseconds a new message is considered as a repeat.
 - `MQTTServer`: IP Address or name of the MQTT broker.
-- `MQTTPort`: The port that the MQTT broker listens on. { get; set; }
+- `MQTTPort`: The port that the MQTT broker listens on.
 - `MQTTUser`: Username to connect to the MQTT broker
 - `MQTTPassword`: Password to connect to the MQTT broker
-- Alter the `Devices` section to match your own setup.
-  - Start with declaring your Easywave transmitters and their buttons.  These will be synchronized to Home Assistant, allowing you to link them in automations.  Easywave2MQTT does its best to detect 5 different button actions:
-    - **press**: a button was pressed for a short time
-    - **double_press**: a button was pressed 2 times within the configured `ActionTimeoutInMilliseconds`.
-    - **triple_press**: a button was pressed 3 times within the configured `ActionTimeoutInMilliseconds`.
-    - **hold**: the button was held longer than the configured `ActionTimeoutInMilliseconds`.
-    - **released**: the button was released after being held.
-  - **Optional**: Declare the receivers and the transmitter buttons you have them linked to.  Doing so will allow these receivers and their current state to be synchronized to Home Assistant.  
+
+The `Devices` section is too complicated to configure through the Addon configuration and should be altered manually:
+- Start with declaring your Easywave transmitters and their buttons.  These will be synchronized to Home Assistant, allowing you to link them in automations.  Easywave2MQTT does its best to detect 5 different button actions:
+  - **press**: a button was pressed for a short time
+  - **double_press**: a button was pressed 2 times within the configured `ActionTimeoutInMilliseconds`.
+  - **triple_press**: a button was pressed 3 times within the configured `ActionTimeoutInMilliseconds`.
+  - **hold**: the button was held longer than the configured `ActionTimeoutInMilliseconds`.
+  - **released**: the button was released after being held.
+- **Optional**: Declare the receivers and the transmitter buttons you have them linked to.  Doing so will allow these receivers and their current state to be synchronized to Home Assistant.  
   If you want to make it possible to control your receivers from Home Assistant, you'll need to manually link them to an RX09 message and add that message as a subscription with `CanSend: "true"`.
 
 ## TODO
 
-- Find out how avoid the need to alter the `config.yaml` file to be able to access the USB device.
 - Add a Web GUI to allow you to configure Easywave devices.
 
 ## How to contribute?

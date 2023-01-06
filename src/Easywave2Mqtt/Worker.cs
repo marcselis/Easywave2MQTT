@@ -3,7 +3,7 @@ using Easywave2Mqtt.Configuration;
 using Easywave2Mqtt.Easywave;
 using Easywave2Mqtt.Events;
 using Easywave2Mqtt.Messages;
-using Easywave2Mqtt.Tools;
+using InMemoryBus;
 
 namespace Easywave2Mqtt
 {
@@ -65,20 +65,21 @@ namespace Easywave2Mqtt
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-      LogServiceStart();
+      LogServiceStarting();
       await CreateDevices().ConfigureAwait(false);
       await base.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-      LogServiceStop();
+      LogServiceStopping();
       return base.StopAsync(cancellationToken);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Concurrency", "PH_P008:Missing OperationCanceledException in Task", Justification = "Service should stop gracefully")]
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-      LogExecuteAsyncStart();
+      LogServiceRunning();
       try
       {
         using (_bus.Subscribe<EasywaveTelegram>(HandleEasywaveEvent))
@@ -87,12 +88,12 @@ namespace Easywave2Mqtt
         {
           while (!_cancellationTokenSource.IsCancellationRequested)
           {
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(1000, stoppingToken).ConfigureAwait(false);
           }
         }
       }
       catch (OperationCanceledException) { }
-      LogExecuteAsyncEnd();
+      LogServiceStopped();
     }
 
     private async Task CreateDevices()
@@ -105,7 +106,7 @@ namespace Easywave2Mqtt
           case DeviceType.Light:
           {
             var name = device.Name ?? $"Light {device.Name}";
-            EasywaveSwitch? light = await AddLight(id, name, device.Area, device.IsToggle);
+            EasywaveSwitch? light = await AddLight(id, name, device.Area, device.IsToggle).ConfigureAwait(false);
             foreach (Subscription sub in device.Subscriptions)
             {
               var address = sub.Address ?? throw new Exception($"Device {id} has a subscription without address");
@@ -135,7 +136,7 @@ namespace Easywave2Mqtt
           case DeviceType.Transmitter:
           {
             var name = device.Name ?? $"Transmitter {device.Name}";
-            EasywaveTransmitter? transmitter = await AddTransmitter(id, name, device.Area, device.Buttons.Count);
+            EasywaveTransmitter? transmitter = await AddTransmitter(id, name, device.Area, device.Buttons.Count).ConfigureAwait(false);
             var count = device.Buttons.Count;
             foreach (var button in device.Buttons)
             {
@@ -219,25 +220,22 @@ namespace Easywave2Mqtt
       return _bus.PublishAsync(new SendButtonPress(button.Id, button.KeyCode));
     }
 
-    private async Task HandleEasywaveSwitchStateChanged(EasywaveSwitch sender)
+    private Task HandleEasywaveSwitchStateChanged(EasywaveSwitch sender)
     {
       if (sender.State == State.On)
       {
-        await _bus.PublishAsync(new EasywaveSwitchTurnedOn(sender.Id));
+        return _bus.PublishAsync(new EasywaveSwitchTurnedOn(sender.Id));
       }
-      else
-      {
-        await _bus.PublishAsync(new EasywaveSwitchTurnedOff(sender.Id));
-      }
+      return _bus.PublishAsync(new EasywaveSwitchTurnedOff(sender.Id));
     }
 
     #region Logging Methods
 
-    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Worker service is starting...")]
-    public partial void LogServiceStart();
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Service is starting...")]
+    public partial void LogServiceStarting();
 
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Worker service is stopping...")]
-    public partial void LogServiceStop();
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "Service is stopping...")]
+    public partial void LogServiceStopping();
 
     [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "Ignored incoming easywave message for unknown device {Address}")]
     public partial void LogIgnoredEasywaveDevice(string address);
@@ -245,11 +243,11 @@ namespace Easywave2Mqtt
     [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "Ignored incoming MQTT message for unknown device {Address}")]
     public partial void LogIgnoredMqttDevice(string address);
 
-    [LoggerMessage(EventId = 22, Level = LogLevel.Trace, Message = "-->ExecuteAsync")]
-    public partial void LogExecuteAsyncStart();
+    [LoggerMessage(EventId = 22, Level = LogLevel.Information, Message = "Service running...")]
+    public partial void LogServiceRunning();
 
-    [LoggerMessage(EventId = 23, Level = LogLevel.Trace, Message = "<--ExecuteAsync")]
-    public partial void LogExecuteAsyncEnd();
+    [LoggerMessage(EventId = 23, Level = LogLevel.Error, Message = "Service stopped...")]
+    public partial void LogServiceStopped();
 
     [LoggerMessage(EventId = 6, Level = LogLevel.Information, Message = "    Declaring button {Name} ({Id}:{KeyCode}) in {Area}")]
     public partial void LogButtonDeclare(string id, char keyCode, string name, string? area = "<<no area passed>>");
