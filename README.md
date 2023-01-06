@@ -46,7 +46,7 @@ In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigb
 
 ## Architecture
 
-![Easywave2MQTT Architecture](https://github.com/marcselis/Easywave2MQTT/blob/main/Architecture.png)
+![Easywave2MQTT Architecture](./blob/main/Architecture.png)
 
 This program has 4 main parts:
 
@@ -101,7 +101,7 @@ For now, this step requires some manual actions:
 
 ## Configuration
 
-The following settings from the `appsettings.json` file are overriden by the addon configuration, and should not be altered.
+The following settings from the [appsettings.json](./src/Easywave2Mqtt/appsettings.json) file are overriden by the addon configuration, and should not be altered.
 
 - `LogLevel`: the level at wich the addon should log its progress.
 - `SerialPort`: the device where your [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) can be found.  (e.g. `COM1` in Windows, `/dev/ttyUSB0` in Linux)
