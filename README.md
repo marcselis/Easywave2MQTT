@@ -46,7 +46,7 @@ In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigb
 
 ## Architecture
 
-![Easywave2MQTT Architecture](./blob/main/Architecture.png)
+![Easywave2MQTT Architecture](./Architecture.png)
 
 This program has 4 main parts:
 
