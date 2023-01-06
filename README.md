@@ -8,15 +8,14 @@ I chose for this approach over a native integration because you have to write th
 
 ## What is Easywave?
 
-Easywave is a proprietary wireless protocol developed by [Niko](https://www.niko.eu/) & [Eldat](https://www.eldat.de/), using the robust RF 868 Mhz technology that enables indoor wireless communication up to 30m.  It is a very simple unidirectional protocol. Easywave is a very simple protocol that allows unidirectional (one way) communication between a transmitter and one or more receivers.
+Easywave is a proprietary wireless protocol developed by [Niko](https://www.niko.eu/) & [Eldat](https://www.eldat.de/), using the robust RF 868 Mhz technology that enables indoor wireless communication up to 30m.  Easywave is a very simple protocol that allows unidirectional (one way) communication between a transmitter and one or more receivers.
 
 Very little technical information can be found on the protocol itself, but what I have detected thus far is that an Easywave message that is sent by a transmitter has 2 parts:
 
 - the transmitters address (unique 6-byte code).
 - a single byte payload, indicating what button was pressed.
 
-It is the receiver that decides what messages it processes.  Most of the time this decision process is done by pressing a link button
-on the receiver and triggering the transmitter to send the message. For example, the 
+It is the receiver that decides what messages it processes.  Most of the time this decision process is done by pressing a link button on the receiver and triggering the transmitter to send the message. For example, the
 [Niko Single-Pole RF Receiver](https://www.niko.eu/en/products/switching-material-and-socket-outlets/wireless-solutions/one-channel-flush-mounting-wireless-receiver-single-pole-potential-free-productmodel-niko-3f9e1469-93a4-5b9e-94aa-da26caa6a03a)
 can be linked in 1- or 2-key mode:
 
@@ -35,7 +34,7 @@ can be linked in 1- or 2-key mode:
 
 Eldat produces the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html). This USB stick emulates a serial port that a computer program can use to listen to Easywave traffic. By sending commands to the serial port, you can instruct the USB stick to send Easywave messages, but only using a limited number of addresses (0 to 64/128, depending on the stick model), requiring you to (also) link the transceiver to the receivers you want to control.
 
-### Issues with the Easywave protocol & devices.
+### Issues with the Easywave protocol & devices
 
 In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigbee), an Easywave receiver does not give feedback, leaving no way for the program to check whether the message was actually processed and what the result was.  This leads to all kinds of problems:
 
@@ -61,18 +60,31 @@ This program has 4 main parts:
 It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some advanced tinkering.  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistent.
 
 So, for now, the only way to do it, is to manually alter the contents of the `appsettings.json` file that is embedded in the `addon/Easywave2MQTT/app.tar.gz` archive.
-Extract the appsettings.json file from that archive, and alter the `Devices` setting according to your setup.  My setup is available as a reference, to help you figure out what configuration is needed.  See the [Configuration]()
 
+1. Extract the appsettings.json file from that archive.
+2. Alter the `Devices` setting according to your setup.  My setup is available as a reference, to help you figure out what configuration is needed.  See the [Configuration](#configuration) for more detailed information.
+3. Overwrite the `appsettings.json` file in the archive with your modified version.
+4. Copy the complete `Easywave2MQTT` folder from the `addon` subfolder to your [Home Assistant addons share](\\homeassistant\addons).  (You'll need to have the Samba addon running for this).
+5. Go to Home Assistant and open the Home Assitant Add-on Store.
+6. In the top righthand corner, press the Menu button (the one with the 3 dots).
+7. Choose `Check for updates`.
+8. The add-on should become visible after a few seconds under the topic `Local add-ons`.
+9. Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
+10. Switch to the `Configuration` tab in the top and fix the `serialport` & `mqtt*` settings to match your setup.
+11. Press `Save` in the bottom-right to save your settings.
+12. Switch back to the `Information` tab in the top, and press `(Re)Start` to start the add-on.
+13. After a few seconds, check the logs and scroll to the bottom.  There should be a line saying the Eldat Transceiver was detected.
 
+**Good luck!**
 
 ## Advanced Topics
 
 ### Debugging
 
 - Check that you have the following tools available:
-
   - [.NET 7.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
   - A code editor, like [Visual Studio Code](https://code.visualstudio.com/) or [Visual Studio](https://visualstudio.microsoft.com/), if you want to make changes.
+- Attach the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) to your developer PC and make sure you have the drivers installed (can be downloaded from the page in the link).
   - Update the contents of the `appsettings.json` file.  See the [Configuration Section](#configuration) for more information.
 - You should be able to test and debug this project under both Windows & Linux without any code changes.
 
@@ -84,24 +96,12 @@ For now, this step requires some manual actions:
 2) Build the solution in `Release` mode.
 3) Publish the Easywave2Mqtt project to the folder `src\Easywave2Mqtt\bin\Release\net7.0\publish`.
 4) tar & gzip the contents of the `src\Easywave2Mqtt\bin\Release\net7.0\publish` folder and name the resulting file `app.tar.gz`.
-5) Move that file to the `addon\Easywave2MQTT` folder.
-6) Copy the `Easywave2MQTT` folder from `addon` folder to the `addons` share of Home Assistant.
-7) Go to Home Assistant and open the Home Assitant Add-on Store.
-8) In the top righthand corner, press the Menu button (the one with the 3 dots).
-9) Choose `Check for updates`.
-10) The add-on should become visible after a few seconds under the topic `Local add-ons`.
-11) Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
-12) Swith to the `Configuration` tab in the top and fix the `serialport` & `mqtt` settings to match your setup.
-13) Press `Save` in the bottom-right to save your settings.
-14) Switch back to the `Information` tab in the top, and press `(Re)Start` to start the add-on.
-15) After a few seconds, check the logs and scroll to the bottom.
-   There should be a line saying the Eldat Transceiver was detected.
-
-**Good luck!**
+5) Move that file to the `addon\Easywave2MQTT` folder and overwrite the existing file.
+6) Continue with step 4. from the [Getting Started section](#getting-started).
 
 ## Configuration
 
-The following settings from the [appsettings.json](./src/Easywave2Mqtt/appsettings.json) file are overriden by the addon configuration, and should not be altered.
+The following settings from the [appsettings.json](./src/Easywave2Mqtt/appsettings.json) file are overriden by the addon configuration, and should not be altered when you are running it as a Home Assistant add-on.  These settings are needed when running on your [local development PC](#debugging).
 
 - `LogLevel`: the level at wich the addon should log its progress.
 - `SerialPort`: the device where your [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) can be found.  (e.g. `COM1` in Windows, `/dev/ttyUSB0` in Linux)
@@ -113,14 +113,60 @@ The following settings from the [appsettings.json](./src/Easywave2Mqtt/appsettin
 - `MQTTPassword`: Password to connect to the MQTT broker
 
 The `Devices` section is too complicated to configure through the Addon configuration and should be altered manually:
+
 - Start with declaring your Easywave transmitters and their buttons.  These will be synchronized to Home Assistant, allowing you to link them in automations.  Easywave2MQTT does its best to detect 5 different button actions:
   - **press**: a button was pressed for a short time
   - **double_press**: a button was pressed 2 times within the configured `ActionTimeoutInMilliseconds`.
   - **triple_press**: a button was pressed 3 times within the configured `ActionTimeoutInMilliseconds`.
   - **hold**: the button was held longer than the configured `ActionTimeoutInMilliseconds`.
   - **released**: the button was released after being held.
+  
+  A transmitter the button that sends out a signal when pressed.  Its configuration looks as follows:
+
+  ``` json
+  {
+    "Id": "229ad6",              //the unique easywave ID of the switch.
+                                 //The easiest way to get a hold of it is to run the plugin with an empty devices list
+                                 //and press a button on that switch.
+                                 //The Add-on will log the id of the unknown button.
+    "Type": "Transmitter",       //fixed value
+    "Name": "Kitchen switch 1",  //name that you to see displayed in Home Assistant.
+    "Area": "Kitchen",           //the Home Assistant area where the switch is located
+    "Buttons": [ "A", "B" ]      //Niko switches come in 2- or 4 button variants.
+                                 //A/B = on/off on left-hand side when using a normal light switch cover.
+                                 //C/D = on/off on right-hand side when using a normal light switch cover.
+                                 //Niko also has special covers with 4 independent buttons.
+  }
+  ```
+
 - **Optional**: Declare the receivers and the transmitter buttons you have them linked to.  Doing so will allow these receivers and their current state to be synchronized to Home Assistant.  
   If you want to make it possible to control your receivers from Home Assistant, you'll need to manually link them to an RX09 message and add that message as a subscription with `CanSend: "true"`.
+
+  A receiver is the actual device that switches the light.  Its configuration looks as follows:
+
+   ``` json
+  {
+    "Id": "ktchn1",              //the unique ID of the receivers.  You can choose this yourself.
+    "Type": "Light",             //fixed value
+    "Name": "Kitchen light",     //name that you want to see displayed in Home Assistant.
+    "Area": "Kitchen",           //the Home Assistant area where the receiver is located
+     "Subscriptions": [          
+        {                        //the transmitter buttons that you have manually linked to the receiver
+          "Address": "2274e4",   //this is needed to make Home Assistant reflect the state of the device
+          "KeyCode": "C"         //when one of these buttons is pressed
+        },
+        {
+          "Address": "22a4c1",   //addresses mentioned here should be declared as Transmitter device first!
+          "KeyCode": "A"
+        },
+        {                        //the RX09 USB transmitter can also be linked to a light
+          "Address": "000010",   //addresses starting with 0000 are RX09 addresses
+          "KeyCode": "C",        //the key code that was linked
+          "CanSend": "true"      //True indicates that the addon can request this message to be sent
+        }                        //when Home Assistant requests a state change for this device.
+      ]
+  }
+  ```
 
 ## TODO
 
@@ -131,4 +177,3 @@ The `Devices` section is too complicated to configure through the Addon configur
 I accept tips, ideas or new feature requests, but please bear in mind that I work on this project in my free time, so I can't make any promises on their acceptance & timings.
 
 I'm happy to accept pull requests.
-
