@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/dotnet/runtime:6.0
-# Copy data for add-on
-ADD app.tar.gz /app
-
+FROM mcr.microsoft.com/dotnet/runtime:7.0
+# Copy add-on binaries
+ADD app /app
+# Switch to app folder
 WORKDIR /app
-
-ENTRYPOINT [ "dotnet", "Easywave2Mqtt.dll" ]
+# Run the addon
+CMD [ "dotnet", "Easywave2Mqtt.dll" ]

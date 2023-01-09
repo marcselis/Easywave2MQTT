@@ -12,6 +12,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Easywave2Mqtt", "Easywave2Mqtt\Easywave2Mqtt.csproj", "{B8A5656B-D820-431B-9A1E-BB9EFCD6E478}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EldatEmulator", "EldatEmulator\EldatEmulator.csproj", "{07DF8B04-CD43-4346-9332-CBD39F77E868}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InMemoryBus", "Tools\InMemoryBus.csproj", "{3FEF4B18-473D-4D88-A056-27C0CBA742F9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Addon", "Addon", "{720CAAB9-000A-4C29-9837-7FBDD17305D2}"
+	ProjectSection(SolutionItems) = preProject
+		..\addon\Easywave2MQTT\CHANGELOG.md = ..\addon\Easywave2MQTT\CHANGELOG.md
+		..\addon\Easywave2MQTT\config.yaml = ..\addon\Easywave2MQTT\config.yaml
+		..\addon\Easywave2MQTT\Dockerfile = ..\addon\Easywave2MQTT\Dockerfile
+		..\addon\Easywave2MQTT\README.md = ..\addon\Easywave2MQTT\README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,6 +34,14 @@ Global
 		{B8A5656B-D820-431B-9A1E-BB9EFCD6E478}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8A5656B-D820-431B-9A1E-BB9EFCD6E478}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8A5656B-D820-431B-9A1E-BB9EFCD6E478}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07DF8B04-CD43-4346-9332-CBD39F77E868}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07DF8B04-CD43-4346-9332-CBD39F77E868}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07DF8B04-CD43-4346-9332-CBD39F77E868}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07DF8B04-CD43-4346-9332-CBD39F77E868}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

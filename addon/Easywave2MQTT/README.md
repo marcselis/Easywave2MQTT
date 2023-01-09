@@ -8,7 +8,7 @@ You can use this add-on to add support for Easywave devices in Home Assistant.  
 
 This add-on requires the presence of an [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) in the machine.
 
-**This project is still in alpha phase, but is usable after some manual tweaking.**
+**This project is still in beta phase, but is usable after some manual tweaking.**
 
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg

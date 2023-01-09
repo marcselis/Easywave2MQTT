@@ -2,6 +2,7 @@
 
 |Version|Changes|
 |-------|-------|
-| 0.1 alpha | First version|
-| 0.2 alpha | First public version|
-
+| 0.1 alpha | First version.|
+| 0.2 alpha | First public version.|
+| 0.3 beta | Automatically add all serial devices to addon container.<br/>Added configuration options for serial device, mqtt & log level.<br/>Switched to SeriLog for logging.<br/>Switched to .NET 7.0.<br/>Added test project to simulate a local Eldat RX09 device. This project requires on the [com0com Null-modem emulator](https://files.akeo.ie/blog/com0com.7z) and an MQTT server where the Easywave2Mqtt process is connected to.|
+| 0.4 beta | Simplified addon building & startup: <br/>- addon binaries & config file are directly editable in app subfolder, making it easier for non-developers to alter the configuration and to deploy the addon in Home Assistant.<br/>- options are directly read from data subfolder (if available).<br/>Lowered logging level for a few `MessagingService` messages that were logged twice, but in a different way. |

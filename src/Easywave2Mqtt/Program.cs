@@ -1,7 +1,10 @@
 ﻿using Easywave2Mqtt.Configuration;
 using Easywave2Mqtt.Easywave;
 using Easywave2Mqtt.Mqtt;
-using Easywave2Mqtt.Tools;
+using InMemoryBus;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 [assembly: CLSCompliant(false)]
 
@@ -14,10 +17,18 @@ namespace Easywave2Mqtt
 
     public static void Main(string[] args)
     {
+      var logLevelSwitch = new LoggingLevelSwitch(LogEventLevel.Verbose);
+      Log.Logger = new LoggerConfiguration()
+          .MinimumLevel.ControlledBy(logLevelSwitch)
+          .Enrich.FromLogContext()
+          .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3} {SourceContext}] {Message:lj}{NewLine}{Exception}")
+          .CreateLogger();
+      IHost app = CreateHostBuilder(args).Build();
+      //Configure default loglevel from settings
+      Settings = app.Services.GetRequiredService<Settings>();
+      logLevelSwitch.MinimumLevel = Settings.LogLevel;
       try
       {
-        var app = CreateHostBuilder(args).Build();
-        Settings = app.Services.GetRequiredService<Settings>();
         app.Run();
       }
       catch (OperationCanceledException)
@@ -29,34 +40,25 @@ namespace Easywave2Mqtt
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
       IHostBuilder? builder = Host.CreateDefaultBuilder(args);
-      //Support this program to be registered as a service in Windows or Linux.
-      //This is not actually needed when running this program as a Home Assistant add-on, as it will be running as a Console application in a Docker container then.
-      switch (Environment.OSVersion.Platform)
-      {
-        case PlatformID.Unix:
-          _ = builder.UseSystemd();
-          break;
-        case PlatformID.Win32NT:
-          _ = builder.UseWindowsService(options =>
-                                        {
-                                          options.ServiceName = "Easywave2Mqtt Service";
-                                        });
-          break;
-        default:
-          throw new NotSupportedException($"Unsupported platform {Environment.OSVersion.Platform}");
-      }
+      _ = builder.UseSerilog()
+        .ConfigureAppConfiguration((context, bld) => bld
+          .SetBasePath(context.HostingEnvironment.ContentRootPath)
+          .AddJsonFile("appsettings.json", false, true)
+          .AddJsonFile(Path.Combine(Directory.GetDirectoryRoot("."), "data", "options.json"), true, true)
+          .AddEnvironmentVariables());
       return builder.ConfigureServices((_, services) =>
                                          //Configure the services needed to run everything
                                          services.AddSingleton<IBus, Bus>()
                                                  .AddSingleton(svc =>
                                                                {
                                                                  var config = new Settings();
-                                                                 svc.GetRequiredService<IConfiguration>().Bind("Settings", config);
+                                                                 svc.GetRequiredService<IConfiguration>().Bind(config);
                                                                  return config;
                                                                })
                                                  .AddHostedService<MessagingService>()
                                                  .AddHostedService<Worker>()
-                                                 .AddHostedService<EldatRx09Transceiver>())
+                                                 .AddHostedService<EldatRx09Transceiver>()
+                                                 )
                     .UseConsoleLifetime();
     }
   }

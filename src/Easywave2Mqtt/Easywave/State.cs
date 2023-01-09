@@ -1,8 +1,8 @@
 ﻿namespace Easywave2Mqtt.Easywave
 {
-    public enum State
-    {
-        Off,
-        On
-    }
+  public enum State
+  {
+    Off,
+    On
+  }
 }
