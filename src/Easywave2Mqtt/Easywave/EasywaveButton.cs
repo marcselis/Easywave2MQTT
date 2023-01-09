@@ -171,28 +171,28 @@ namespace Easywave2Mqtt.Easywave
     }
 
     [LoggerMessage(EventId = 4, Level = LogLevel.Trace, Message = "  -->HandlePress {KeyCode} ({ElapsedTime} elapsed)")]
-    public partial void LogHandleButtonPressStart(char keyCode, long elapsedTime);
+    private partial void LogHandleButtonPressStart(char keyCode, long elapsedTime);
 
     [LoggerMessage(EventId = 5, Level = LogLevel.Trace, Message = "  <--HandlePress {KeyCode}")]
     public partial void LogHandleButtonPressEnd(char keyCode);
 
     [LoggerMessage(EventId = 7, Level = LogLevel.Trace, Message = "  -->SendPush")]
-    public partial void LogSendPushStart();
+    private partial void LogSendPushStart();
 
     [LoggerMessage(EventId = 8, Level = LogLevel.Trace, Message = "  <--SendPush")]
-    public partial void LogSendPushEnd();
+    private partial void LogSendPushEnd();
 
     [LoggerMessage(EventId = 9, Level = LogLevel.Debug, Message = "    Increasing press counter to {Counter}")]
-    public partial void LogIncreasePressCounter(int counter);
+    private partial void LogIncreasePressCounter(int counter);
 
     [LoggerMessage(EventId = 10, Level = LogLevel.Debug, Message = "    Resetting press counter")]
-    public partial void LogResetPressCounter();
+    private partial void LogResetPressCounter();
 
     [LoggerMessage(EventId = 11, Level = LogLevel.Debug, Message = "    Increasing repeat counter to {Counter}")]
-    public partial void LogIncreaseRepeatCounter(int counter);
+    private partial void LogIncreaseRepeatCounter(int counter);
 
     [LoggerMessage(EventId = 12, Level = LogLevel.Debug, Message = "    Resetting repeat counter")]
-    public partial void LogResetRepeatCounter();
+    private partial void LogResetRepeatCounter();
   }
 
 }

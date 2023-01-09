@@ -39,9 +39,11 @@ Eldat produces the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnitts
 In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigbee), an Easywave receiver does not give feedback, leaving no way for the program to check whether the message was actually processed and what the result was.  This leads to all kinds of problems:
 
 - When the receiver is a dimmer, there is no way of knowing on what level the light connected to the dimmer is burning or even if it is still burning at all, after sending a repeated stream of dim down messages.
-  This makes makes it very difficult for this project to reflect the state of lights in the house in Home Assistant
-- A typical Easywave wireless switch, like the [Niko 41-00001](https://www.niko.eu/en/products/wireless-controls/wireless-switch-with-two-buttons-productmodel-niko-fbacd5f6-94fc-5ce9-af7c-7394469b12c0) will send 2 to 4 repeated messages when a user presses a button.  This makes it difficult to predict in what state a receiver that is linked in 1-button mode will be after processing these messages, when looking at the messages being sent.
-- These repeated messages makes it also hard to detect a button being held and double- & tripple pressed.
+  This makes makes it very difficult for this project to reflect the state of dimmable lights in the house in Home Assistant.  As a consequence, dimmable receivers are not supported and should be configured as normal switching receivers.
+- A typical Easywave wireless switch, like the [Niko 41-00001](https://www.niko.eu/en/products/wireless-controls/wireless-switch-with-two-buttons-productmodel-niko-fbacd5f6-94fc-5ce9-af7c-7394469b12c0) will send 2 to 4 repeated messages when a user presses a button.  This makes it difficult to predict in what state a receiver that is linked in 1-button mode will be after processing these messages, when looking at the messages being sent.  As a consequence, the current version does not support receivers in 1-button mode.
+- These repeated messages makes it also hard to detect a button being held and double- & tripple pressed. The addon tries to handle this with 2 settings.
+  - **EasywaveRepeatTimeout**: any message received for the same button within this time (in milliseconds) is considered a repeated message and is ignored.  If the same message continues to be received after this timeout, the button is considered to be 'held'.
+  - **EasywaveActionTimeout**: number of milliseconds to wait until a button action is considered complete. 'Press' messages received within this time are considered to be repeated presses by the user.
 
 ## Architecture
 
@@ -50,30 +52,29 @@ In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigb
 This program has 4 main parts:
 
 - A **Easyweave service** that takes care of the Easywave communication using the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html).
-- An **MQTT service** that takes care of communication over MQTT.
-- Some **Worker Logic** that uses the other 2 services to detect what is happening in the Easywave world and 
-  communicating it with [Home Assistant](https://www.home-assistant.io/).
-- Communication between the different components is done through a custom-built and very rudimentary in-memory **bus**.
+- A **Messaging service** that takes care of communication over MQTT.
+- Some **Worker service** that communicates with the other 2 services to detect what is happening in the Easywave world and 
+  communicating it with [Home Assistant](https://www.home-assistant.io/) and vice-versa.
+- Communication between these services is done through a custom-built and very rudimentary in-memory [message bus](./src/Tools/Bus.cs).
 
 ## Getting started
 
-It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some advanced tinkering.  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistent.
+It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some tinkering with a [config file](./addon/Easywave2MQTT/app/appsettings.json).  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistent.
 
 So, for now, the only way to do it, is to manually alter the contents of the `appsettings.json` file that is embedded in the `addon/Easywave2MQTT/app.tar.gz` archive.
 
-1. Extract the appsettings.json file from that archive.
+1. Open the [appsettings.json](./addon/Easywave2MQTT/app/appsettings.json) file in your favourite editor.
 2. Alter the `Devices` setting according to your setup.  My setup is available as a reference, to help you figure out what configuration is needed.  See the [Configuration](#configuration) for more detailed information.
-3. Overwrite the `appsettings.json` file in the archive with your modified version.
-4. Copy the complete `Easywave2MQTT` folder from the `addon` subfolder to your [Home Assistant addons share](\\homeassistant\addons).  (You'll need to have the Samba addon running for this).
-5. Go to Home Assistant and open the Home Assitant Add-on Store.
-6. In the top righthand corner, press the Menu button (the one with the 3 dots).
-7. Choose `Check for updates`.
-8. The add-on should become visible after a few seconds under the topic `Local add-ons`.
-9. Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
-10. Switch to the `Configuration` tab in the top and fix the `serialport` & `mqtt*` settings to match your setup.
-11. Press `Save` in the bottom-right to save your settings.
-12. Switch back to the `Information` tab in the top, and press `(Re)Start` to start the add-on.
-13. After a few seconds, check the logs and scroll to the bottom.  There should be a line saying the Eldat Transceiver was detected.
+3. Copy the complete [Easywave2MQTT](./addon) folder from the `addon` subfolder to your [Home Assistant addons share](\\homeassistant\addons).  (You'll need to have the Samba addon running for this).
+4. Go to Home Assistant and open the Home Assitant Add-on Store.
+5. In the top righthand corner, press the Menu button (the one with the 3 dots).
+6. Choose `Check for updates`.
+7. The add-on should become visible after a few seconds under the topic `Local add-ons`.
+8. Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
+9. Switch to the `Configuration` tab in the top and fix the `serialport` & `mqtt*` settings to match your setup.
+10. Press `Save` in the bottom-right to save your settings.
+11. Switch back to the `Information` tab in the top, and press `(Re)Start` to start the add-on.
+12. After a few seconds, check the logs and scroll to the bottom.  There should be a line saying the Eldat Transceiver was detected.
 
 **Good luck!**
 
@@ -93,11 +94,9 @@ So, for now, the only way to do it, is to manually alter the contents of the `ap
 For now, this step requires some manual actions:
 
 1) Update settings to match your current set-up.  See [Configuration Section](#configuration) for more information.
-2) Build the solution in `Release` mode.
-3) Publish the Easywave2Mqtt project to the folder `src\Easywave2Mqtt\bin\Release\net7.0\publish`.
-4) tar & gzip the contents of the `src\Easywave2Mqtt\bin\Release\net7.0\publish` folder and name the resulting file `app.tar.gz`.
-5) Move that file to the `addon\Easywave2MQTT` folder and overwrite the existing file.
-6) Continue with step 4. from the [Getting Started section](#getting-started).
+2) Build the solution in `Release|Any CPU` mode.
+3) Publish the Easywave2Mqtt project to the folder `addon/Easywave2MQTT/app`.  A publish profile is already created for this.
+4) Continue with step 3. from the [Getting Started section](#getting-started).
 
 ## Configuration
 

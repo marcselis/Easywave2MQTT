@@ -44,7 +44,7 @@ namespace Easywave2Mqtt
         .ConfigureAppConfiguration((context, bld) => bld
           .SetBasePath(context.HostingEnvironment.ContentRootPath)
           .AddJsonFile("appsettings.json", false, true)
-          .AddJsonFile("options.json", true, true)
+          .AddJsonFile(Path.Combine(Directory.GetDirectoryRoot("."), "data", "options.json"), true, true)
           .AddEnvironmentVariables());
       return builder.ConfigureServices((_, services) =>
                                          //Configure the services needed to run everything

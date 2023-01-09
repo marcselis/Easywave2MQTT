@@ -22,7 +22,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Addon", "Addon", "{720CAAB9
 		..\addon\Easywave2MQTT\config.yaml = ..\addon\Easywave2MQTT\config.yaml
 		..\addon\Easywave2MQTT\Dockerfile = ..\addon\Easywave2MQTT\Dockerfile
 		..\addon\Easywave2MQTT\README.md = ..\addon\Easywave2MQTT\README.md
-		..\addon\Easywave2MQTT\run.sh = ..\addon\Easywave2MQTT\run.sh
 	EndProjectSection
 EndProject
 Global

@@ -124,13 +124,13 @@ namespace Easywave2Mqtt.Mqtt
             default:
               var bodyParts = body.Split('_');
               var buttonCode = bodyParts[1][0];
-              _logger.LogInformation("Received {Action} on {Address}:{ButtonCode}", bodyParts[2], address, buttonCode);
+              _logger.LogDebug("Received {Action} on {Address}:{ButtonCode}", bodyParts[2], address, buttonCode);
               await _bus.PublishAsync(new MqttMessage(address, buttonCode, bodyParts[2])).ConfigureAwait(false);
               break;
           }
           break;
         case "mqtt2easywave":
-          _logger.LogInformation("Received {Action} on {Address}", body, address);
+          _logger.LogDebug("Received {Action} on {Address}", body, address);
           await _bus.PublishAsync(new MqttCommand(address, body)).ConfigureAwait(false);
           break;
       }
