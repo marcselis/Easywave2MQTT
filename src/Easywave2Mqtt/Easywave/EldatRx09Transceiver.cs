@@ -19,18 +19,30 @@ namespace Easywave2Mqtt.Easywave
     private readonly ILogger _logger;
     private readonly IBus _bus;
     private bool _isOpen;
-    private readonly SerialPort _port;
+    private readonly SerialPort? _port;
     private IDisposable? _subscription;
 
     public EldatRx09Transceiver(ILogger<EldatRx09Transceiver> logger, IBus bus, Settings settings)
     {
+      _logger = logger;
+      _bus = bus;
+      var portNames = SerialPort.GetPortNames();
+      if (!portNames.Any())
+      {
+        logger.LogError("No serial ports found!  Do you have the Eldat RX09 stick installed?");
+        return;
+      }
       var port = settings.SerialPort ?? throw new Exception("SerialPort is not set in settings");
       if (!SerialPort.GetPortNames().Contains(port))
       {
-        throw new Exception($"Serial Port {port} is not found");
+        logger.LogError("Serial port {port} is not found!", port);
+        logger.LogInformation("List of serial ports found");
+        foreach (var portName in portNames)
+        {
+          logger.LogInformation("   {port}", portName);
+        }
+        return;
       }
-      _logger = logger;
-      _bus = bus;
       _port = new SerialPort(port, 57600, Parity.None, 8, StopBits.One)
       {
         Handshake = Handshake.None,
@@ -44,6 +56,11 @@ namespace Easywave2Mqtt.Easywave
     public override Task StartAsync(CancellationToken cancellationToken)
     {
       LogServiceStarting();
+      if (_port == null)
+      {
+        _logger.LogError("No port available, service not started");
+        return Task.CompletedTask;
+      }
       Open();
       return base.StartAsync(cancellationToken);
     }
