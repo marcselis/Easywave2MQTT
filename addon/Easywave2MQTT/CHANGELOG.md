@@ -8,3 +8,4 @@
 | 0.4 beta | Simplified addon building & startup: <br/>- addon binaries & config file are directly editable in app subfolder, making it easier for non-developers to alter the configuration and to deploy the addon in Home Assistant.<br/>- options are directly read from data subfolder (if available).<br/>Lowered logging level for a few `MessagingService` messages that were logged twice, but in a different way. |
 | 0.5 beta | Allow addon to start when no serial ports are found, or when a non-existing port was specified |
 | 0.5.2 beta | Fix crash when serialport is throwing IOException for a timeout, instead of a TimeoutException |
+| 0.5.3 beta | Fix bug in detection mechanism for button repeats |

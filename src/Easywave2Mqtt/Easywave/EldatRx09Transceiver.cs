@@ -149,27 +149,22 @@ namespace Easywave2Mqtt.Easywave
       {
         while (!stoppingToken.IsCancellationRequested && _port!.IsOpen)
         {
-          if (_port.BytesToRead > 0)
+          try
           {
-            try
+            var line = _port.ReadLine();
+            LogReceivedLine(line);
+            EasywaveTelegram telegram = Parse(line);
+            if (!telegram.Equals(EasywaveTelegram.Empty))
             {
-              var line = _port.ReadLine();
-              LogReceivedLine(line);
-              EasywaveTelegram telegram = Parse(line);
-              if (!telegram.Equals(EasywaveTelegram.Empty))
-              {
-                //Only wait if timeout has occurred, otherwise the double- & triple-press detection mechanism doesn't work.
-                await _bus.PublishAsync(telegram).ConfigureAwait(false);
-              }
-            }
-            catch (TimeoutException)
-            {
-            }
-            catch (IOException ex) when (ex.HResult == TimeoutResult)
-            {
+              //Only wait if timeout has occurred, otherwise the double- & triple-press detection mechanism doesn't work.
+              await _bus.PublishAsync(telegram).ConfigureAwait(false);
             }
           }
-          else
+          catch (TimeoutException)
+          {
+            await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
+          }
+          catch (IOException ex) when (ex.HResult == TimeoutResult)
           {
             await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
           }
