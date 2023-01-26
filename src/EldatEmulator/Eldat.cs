@@ -67,6 +67,8 @@ namespace EldatEmulator
 
     private void ReadAndProcessLine()
     {
+      if (_port.BytesToRead == 0)
+        return;
       try
       {
         _logger.LogTrace("Reading line from port");
@@ -84,6 +86,8 @@ namespace EldatEmulator
       catch (TimeoutException)
       {
       }
+      catch (IOException ex) when (ex.Message.StartsWith("This operation returned because the timeout period expired."))
+      { }
     }
 
     private Task SendEasywaveCommand(SendEasywaveCommand message)

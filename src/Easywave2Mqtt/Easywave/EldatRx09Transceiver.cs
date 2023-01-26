@@ -21,6 +21,8 @@ namespace Easywave2Mqtt.Easywave
     private bool _isOpen;
     private readonly SerialPort? _port;
     private IDisposable? _subscription;
+    private const int PauseTime = 100;
+    private const int TimeoutResult = unchecked((int)0x800705B4);
 
     public EldatRx09Transceiver(ILogger<EldatRx09Transceiver> logger, IBus bus, Settings settings)
     {
@@ -33,6 +35,7 @@ namespace Easywave2Mqtt.Easywave
         return;
       }
       var port = settings.SerialPort ?? throw new Exception("SerialPort is not set in settings");
+      logger.LogInformation("Checking serial port {port}", port);
       if (!SerialPort.GetPortNames().Contains(port))
       {
         logger.LogError("Serial port {port} is not found!", port);
@@ -95,12 +98,12 @@ namespace Easywave2Mqtt.Easywave
     /// </remarks>
     private void Open()
     {
-      LogOpenPort(_port.PortName);
+      LogOpenPort(_port!.PortName);
       _port.Open();
       _subscription = _bus.Subscribe<SendEasywaveCommand>(SendEasywaveCommand);
       _isOpen = true;
-      _port.WriteLine("GETP?");
-      _port.WriteLine("ID?");
+      Send("GETP?");
+      Send("ID?");
     }
 
     private Task SendEasywaveCommand(SendEasywaveCommand message)
@@ -110,18 +113,23 @@ namespace Easywave2Mqtt.Easywave
       {
         throw new ArgumentOutOfRangeException(nameof(message), $"Unable to send to address {address}, this transceiver only supports {MaxAddress} addresses");
       }
-      var line = $"TXP,{address:x2},{message.KeyCode}";
-      LogSendLine(line);
-      _port.WriteLine(line);
+      Send($"TXP,{address:x2},{message.KeyCode}");
       return Task.CompletedTask;
     }
+
+    private void Send(string message)
+    {
+      LogSendLine(message);
+      _port!.WriteLine(message);
+    }
+
 
     /// <summary>
     /// Closes the transceiver so that it stops listening.
     /// </summary>
     private void Close()
     {
-      if (!_isOpen)
+      if (_port==null || !_isOpen)
       {
         return;
       }
@@ -139,22 +147,31 @@ namespace Easywave2Mqtt.Easywave
       LogServiceRunning();
       try
       {
-        while (!stoppingToken.IsCancellationRequested && _port.IsOpen)
+        while (!stoppingToken.IsCancellationRequested && _port!.IsOpen)
         {
-          try
+          if (_port.BytesToRead > 0)
           {
-            var line = _port.ReadLine();
-            LogReceivedLine(line);
-            EasywaveTelegram telegram = Parse(line);
-            if (!telegram.Equals(EasywaveTelegram.Empty))
+            try
             {
-              //Only wait if timeout has occurred, otherwise the double- & triple-press detection mechanism doesn't work.
-              await _bus.PublishAsync(telegram).ConfigureAwait(false);
+              var line = _port.ReadLine();
+              LogReceivedLine(line);
+              EasywaveTelegram telegram = Parse(line);
+              if (!telegram.Equals(EasywaveTelegram.Empty))
+              {
+                //Only wait if timeout has occurred, otherwise the double- & triple-press detection mechanism doesn't work.
+                await _bus.PublishAsync(telegram).ConfigureAwait(false);
+              }
+            }
+            catch (TimeoutException)
+            {
+            }
+            catch (IOException ex) when (ex.HResult == TimeoutResult)
+            {
             }
           }
-          catch (TimeoutException)
+          else
           {
-            await Task.Delay(100, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
           }
         }
       }

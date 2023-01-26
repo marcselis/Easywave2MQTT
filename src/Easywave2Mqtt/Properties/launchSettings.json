@@ -5,7 +5,8 @@
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development",
         "LOGLEVEL": "Verbose",
-        "SERIALPORT": "COM1"
+        "SERIALPORT": "COM1",
+        "MQTTServer": "localhost"
       },
       "dotnetRunMessages": true
     },
