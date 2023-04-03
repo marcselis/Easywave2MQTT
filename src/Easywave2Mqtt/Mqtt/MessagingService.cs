@@ -4,7 +4,6 @@ using Easywave2Mqtt.Messages;
 using InMemoryBus;
 using MQTTnet;
 using MQTTnet.Client;
-using MQTTnet.Extensions.ManagedClient;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
 
@@ -13,17 +12,26 @@ namespace Easywave2Mqtt.Mqtt
 
   public partial class MessagingService : BackgroundService
   {
-    private static readonly MqttFactory MqttFactory = new();
-    // private static readonly MqttClientOptions Options;
+    private readonly IMqttClient _client = new MqttFactory().CreateMqttClient();
+    private readonly MqttClientOptions _clientOptions;
     private readonly IBus _bus;
-    private readonly IManagedMqttClient _client;
     private readonly ILogger<MessagingService> _logger;
+    private readonly MqttTopicFilter _outgoing = new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build();
+    private readonly MqttTopicFilter _incoming = new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build();
+    private readonly MqttClientSubscribeOptions _subscribeOptions;
+    private bool _reconnecting = false;
 
     public MessagingService(ILogger<MessagingService> logger, IBus bus)
     {
       _logger = logger;
       _bus = bus;
-      _client = MqttFactory.CreateManagedMqttClient();
+      _clientOptions = new MqttClientOptionsBuilder()
+        .WithClientId("Easywave2MQTT")
+        .WithTcpServer(Program.Settings!.MQTTServer, Program.Settings!.MQTTPort)
+        .WithCredentials(Program.Settings!.MQTTUser, Program.Settings!.MQTTPassword)
+        .Build();
+      ;
+      _subscribeOptions = new MqttClientSubscribeOptionsBuilder().WithTopicFilter(_outgoing).WithTopicFilter(_incoming).Build();
     }
 
     public override void Dispose()
@@ -36,25 +44,66 @@ namespace Easywave2Mqtt.Mqtt
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
       LogServiceStart();
-      MqttClientOptions clientOptions = new MqttClientOptionsBuilder()
-        .WithClientId("Easywave2MQTT")
-        .WithTcpServer(Program.Settings!.MQTTServer, Program.Settings!.MQTTPort)
-        .WithCredentials(Program.Settings!.MQTTUser, Program.Settings!.MQTTPassword)
-        .Build();
-      ManagedMqttClientOptions managedClientOptions = new ManagedMqttClientOptionsBuilder()
-        .WithClientOptions(clientOptions)
-        .WithPendingMessagesOverflowStrategy(MQTTnet.Server.MqttPendingMessagesOverflowStrategy.DropOldestQueuedMessage)
-        .Build();
       _client.ApplicationMessageReceivedAsync += MessageHandler;
-      await _client.StartAsync(managedClientOptions).ConfigureAwait(false);
+      _client.DisconnectedAsync += DisconnectedHandler;
+      var connectResult = await ConnectAsync().ConfigureAwait(false);
+      if (connectResult.ResultCode != MqttClientConnectResultCode.Success)
+      {
+        LogClientConnectionFailed(connectResult.ResultCode);
+        return;
+      }
+
+      var subscribeResult = await SubscribeAsync().ConfigureAwait(false);
+      foreach (var item in subscribeResult.Items)
+      {
+        if (item.ResultCode != MqttClientSubscribeResultCode.GrantedQoS0)
+        {
+          LogClientSubscriptionFailed(item.TopicFilter.Topic, item.ResultCode);
+        }
+      }
       await base.StartAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task DisconnectedHandler(MqttClientDisconnectedEventArgs arg)
+    {
+      if (_reconnecting)
+        return;
+      _reconnecting = true;
+      LogClientConnectionBroken();
+
+      while (!_client.IsConnected)
+      {
+        try
+        {
+          _=await ConnectAsync().ConfigureAwait(false);
+          _=await SubscribeAsync().ConfigureAwait(false);
+          LogClientReconnected();
+          _reconnecting=false;
+          break;
+        }
+        catch (Exception ex)
+        {
+          LogClientReconnectFailed(ex.Message);
+          await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+        }
+      }
+    }
+
+    private Task<MqttClientConnectResult> ConnectAsync()
+    {
+      return _client.ConnectAsync(_clientOptions);
+    }
+
+    private Task<MqttClientSubscribeResult> SubscribeAsync()
+    {
+      return _client.SubscribeAsync(_subscribeOptions);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
       LogServiceStop();
       _client.ApplicationMessageReceivedAsync -= MessageHandler;
-      await _client.StopAsync().ConfigureAwait(false);
+      await _client.DisconnectAsync().ConfigureAwait(false);
       await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -75,9 +124,6 @@ namespace Easywave2Mqtt.Mqtt
         using (_bus.Subscribe<EasywaveSwitchTurnedOn>(SendSwitchTurnedOn))
         using (_bus.Subscribe<EasywaveSwitchTurnedOff>(SendSwitchTurnedOff))
         {
-          MqttTopicFilter outgoing = new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build();
-          MqttTopicFilter incoming = new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build();
-          await _client.SubscribeAsync(new List<MqttTopicFilter>() { outgoing, incoming }).ConfigureAwait(false);
           while (!stoppingToken.IsCancellationRequested)
           {
             await Task.Delay(100, stoppingToken).ConfigureAwait(false);
@@ -91,12 +137,12 @@ namespace Easywave2Mqtt.Mqtt
 
     private Task SendSwitchTurnedOff(EasywaveSwitchTurnedOff sw)
     {
-      return Send($"easywave2mqtt/{sw.Id}/state", "off");
+      return Send($"easywave2mqtt/{sw.Id}/state", "off", true);
     }
 
     private Task SendSwitchTurnedOn(EasywaveSwitchTurnedOn sw)
     {
-      return Send($"easywave2mqtt/{sw.Id}/state", "on");
+      return Send($"easywave2mqtt/{sw.Id}/state", "on", true);
     }
 
     private async Task MessageHandler(MqttApplicationMessageReceivedEventArgs arg)
@@ -184,15 +230,21 @@ namespace Easywave2Mqtt.Mqtt
       return Send($"easywave2mqtt/{id}/action", $"button_{btn}_hold");
     }
 
-    private Task Send(string topic, string payload, bool retain = false)
+    private async Task Send(string topic, string payload, bool retain = false)
     {
       LogTopicPublish(topic, payload);
-      MqttApplicationMessage message = new MqttApplicationMessageBuilder().WithTopic(topic)
-        .WithPayload(payload)
-        .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
-        .WithRetainFlag(retain)
-        .Build();
-      return _client.EnqueueAsync(message);
+      MqttClientPublishResult publishResult = await _client.PublishAsync(new MqttApplicationMessageBuilder()
+         .WithTopic(topic)
+         .WithPayload(payload)
+         .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+         .WithRetainFlag(retain)
+         .Build());
+
+      if (publishResult.ReasonCode != MqttClientPublishReasonCode.Success)
+      {
+        LogPublishFailed(publishResult.ReasonCode, publishResult.ReasonString);
+        return;
+      }
     }
 
     #region LoggingMethods
@@ -213,6 +265,21 @@ namespace Easywave2Mqtt.Mqtt
 
     [LoggerMessage(EventId = 6, Level = LogLevel.Warning, Message = "MQTT Publish failed with result code {ReasonCode} and readon {ReasonString}")]
     private partial void LogPublishFailed(MqttClientPublishReasonCode reasonCode, string reasonString);
+
+    [LoggerMessage(EventId = 7, Level = LogLevel.Warning, Message = "Connection to MQTT broker closed. Attempting to reconnect...")]
+    private partial void LogClientConnectionBroken();
+
+    [LoggerMessage(EventId = 8, Level = LogLevel.Warning, Message = "Successfully reconnected to MQTT broker.")]
+    private partial void LogClientReconnected();
+
+    [LoggerMessage(EventId = 9, Level = LogLevel.Information, Message = "Failed to reconnect to MQTT broker: {Message}")]
+    private partial void LogClientReconnectFailed(string message);
+
+    [LoggerMessage(EventId = 10, Level = LogLevel.Error, Message = "Failed to connect to MQTT broker: {Result}")]
+    private partial void LogClientConnectionFailed(MqttClientConnectResultCode result);
+
+    [LoggerMessage(EventId = 11, Level = LogLevel.Error, Message = "Failed to subscribe to topic {Topic}: {Result}")]
+    private partial void LogClientSubscriptionFailed(string topic, MqttClientSubscribeResultCode result);
 
     [LoggerMessage(EventId = 17, Level = LogLevel.Information, Message = "Button {Id}:{ButtonCode} pressed")]
     private partial void LogButtonPress(string id, char buttonCode);

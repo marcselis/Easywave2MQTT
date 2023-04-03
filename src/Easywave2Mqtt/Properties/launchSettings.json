@@ -2,12 +2,13 @@
   "profiles": {
     "Easywave2Mqtt": {
       "commandName": "Project",
-      "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development",
-        "LOGLEVEL": "Verbose",
-        "SERIALPORT": "COM1",
-        "MQTTServer": "localhost"
-      },
+        "environmentVariables": {
+            "DOTNET_ENVIRONMENT": "Development",
+            "LOGLEVEL": "Verbose",
+            "SERIALPORT": "COM1",
+            "MQTTServer": "192.168.0.13",
+            "MQTTPassword": "ttqm"
+        },
       "dotnetRunMessages": true
     },
     "WSL": {

@@ -9,3 +9,5 @@
 | 0.5 beta | Allow addon to start when no serial ports are found, or when a non-existing port was specified |
 | 0.5.2 beta | Fix crash when serialport is throwing IOException for a timeout, instead of a TimeoutException |
 | 0.5.3 beta | Fix bug in detection mechanism for button repeats |
+| 0.6 | Automatically reconnect to MQTT server when connection breaks<br/>Persist state of lights in MQTT|
+
