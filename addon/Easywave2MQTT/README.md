@@ -6,7 +6,7 @@
 
 You can use this add-on to add support for Easywave devices in Home Assistant.  Easywave is a proprietary protocol for wireless devices, developed by [Niko](https://niko.eu) & [Eldat](https://www.eldat.de/).
 
-This add-on requires the presence of an [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) in the machine.
+This add-on requires the presence of an [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) in the machine.  Niko USB sticks could work too, **if they are recognized by the OS**.
 
 **This project is still in beta phase, but is usable after some manual tweaking.**
 

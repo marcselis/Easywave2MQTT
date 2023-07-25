@@ -10,4 +10,4 @@
 | 0.5.2 beta | Fix crash when serialport is throwing IOException for a timeout, instead of a TimeoutException |
 | 0.5.3 beta | Fix bug in detection mechanism for button repeats |
 | 0.6 | Automatically reconnect to MQTT server when connection breaks<br/>Persist state of lights in MQTT|
-
+| 0.7.0 | First try to add support for blinds |

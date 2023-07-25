@@ -2,10 +2,11 @@
 
 namespace Easywave2Mqtt.Mqtt
 {
-  public class Light
+  public class Cover
   {
     [JsonPropertyName("unique_id")]
     public string Id { get; set; }
+
     [JsonPropertyName("name")]
     public string Name { get; set; }
 
@@ -18,17 +19,22 @@ namespace Easywave2Mqtt.Mqtt
     [JsonPropertyName("command_topic")]
     public string CommandTopic { get; set; }
 
-    [JsonPropertyName("payload_on")]
-    public string PayloadOn { get; set; }
-    [JsonPropertyName("payload_off")]
-    public string PayloadOff { get; set; }
+    [JsonPropertyName("payload_close")]
+    public string PayloadClose { get; set; }
+
+    [JsonPropertyName("payload_open")]
+    public string PayloadOpen { get; set; }
+
+    [JsonPropertyName("payload_stop")]
+    public string PayloadStop { get; set; }
 
     [JsonPropertyName("device")]
     public Device Device { get; set; }
+
     [JsonPropertyName("availability")]
     public Availability Availability { get; set; }
 
-    public Light(string id, string name, string? area)
+    public Cover(string id, string name, string? area)
     {
       if (id.Length > 6)
       {
@@ -39,9 +45,10 @@ namespace Easywave2Mqtt.Mqtt
       Area = area;
       StateTopic = $"easywave2mqtt/{id}/state";
       CommandTopic = $"mqtt2easywave/{id}/set";
-      PayloadOn = "ON";
-      PayloadOff = "OFF";
-      Device = new Device(id, "Niko", "Easywave Switch", name);
+      PayloadClose = "CLOSE";
+      PayloadOpen = "OPEN";
+      PayloadStop = "STOP";
+      Device = new Device(id, "Niko", "Easywave Blind", name);
       Availability = new Availability();
     }
   }

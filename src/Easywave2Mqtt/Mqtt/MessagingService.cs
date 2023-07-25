@@ -116,6 +116,7 @@ namespace Easywave2Mqtt.Mqtt
       {
         using (_bus.Subscribe<DeclareButton>(btn => DeclareButton(btn.Address, btn.KeyCode, btn.Name, btn.Area, btn.Count)))
         using (_bus.Subscribe<DeclareLight>(sw => DeclareLight(sw.Id, sw.Name, sw.Area)))
+        using (_bus.Subscribe<DeclareBlind>(sw=>DeclareBlind(sw.Id,sw.Name,sw.Area)))
         using (_bus.Subscribe<SendButtonPress>(btn => SendButtonPress(btn.Address, btn.KeyCode)))
         using (_bus.Subscribe<SendButtonDoublePress>(btn => SendButtonDoublePress(btn.Address, btn.KeyCode)))
         using (_bus.Subscribe<SendButtonTriplePress>(btn => SendButtonTriplePress(btn.Address, btn.KeyCode)))
@@ -123,6 +124,8 @@ namespace Easywave2Mqtt.Mqtt
         using (_bus.Subscribe<SendButtonRelease>(btn => SendButtonRelease(btn.Address, btn.KeyCode)))
         using (_bus.Subscribe<EasywaveSwitchTurnedOn>(SendSwitchTurnedOn))
         using (_bus.Subscribe<EasywaveSwitchTurnedOff>(SendSwitchTurnedOff))
+        using (_bus.Subscribe<EasywaveBlindIsOpen>(SendBlindOpen))
+        using (_bus.Subscribe<EasywaveBlindIsClosed>(SendBlindClosed))
         {
           while (!stoppingToken.IsCancellationRequested)
           {
@@ -144,6 +147,17 @@ namespace Easywave2Mqtt.Mqtt
     {
       return Send($"easywave2mqtt/{sw.Id}/state", "on", true);
     }
+
+    private Task SendBlindOpen(EasywaveBlindIsOpen bl)
+    {
+      return Send($"easywave2mqtt/{bl.Id}/state", "OPEN", true);
+    }
+
+    private Task SendBlindClosed(EasywaveBlindIsClosed bl)
+    {
+      return Send($"easywave2mqtt/{bl.Id}/state", "CLOSED", true);
+    }
+
 
     private async Task MessageHandler(MqttApplicationMessageReceivedEventArgs arg)
     {
@@ -198,6 +212,13 @@ namespace Easywave2Mqtt.Mqtt
       var sw = new Light(id, name, area);
       var payload = JsonSerializer.Serialize(sw, MyJsonContext.Default.Light);
       return Send($"homeassistant/light/{id}/config", payload);
+    }
+
+    private Task DeclareBlind(string id, string name, string? area)
+    {
+      var sw = new Cover(id, name, area);
+      var payload = JsonSerializer.Serialize(sw, MyJsonContext.Default.Cover);
+      return Send($"homeassistant/cover/{id}/config", payload);
     }
 
     private Task SendButtonPress(string id, char btn)

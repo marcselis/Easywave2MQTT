@@ -11,6 +11,8 @@ namespace Easywave2Mqtt.Configuration
     [EnumMember(Value = "light")]
     Light,
     [EnumMember(Value = "transmitter")]
-    Transmitter
+    Transmitter,
+    [EnumMember(Value ="blind")]
+    Blind
   }
 }

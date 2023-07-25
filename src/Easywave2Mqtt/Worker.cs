@@ -1,8 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Easywave2Mqtt.Configuration;
 using Easywave2Mqtt.Easywave;
 using Easywave2Mqtt.Events;
 using Easywave2Mqtt.Messages;
+using Easywave2Mqtt.Mqtt;
 using InMemoryBus;
 
 namespace Easywave2Mqtt
@@ -98,11 +100,41 @@ namespace Easywave2Mqtt
 
     private async Task CreateDevices()
     {
-      foreach (Device device in _config.Devices)
+      foreach (var device in _config.Devices)
       {
         var id = device.Id ?? throw new Exception("Device without Id found in settings");
         switch (device.Type)
         {
+          case DeviceType.Blind:
+          {
+            var name = device.Name ?? $"Blind {device.Name}";
+            EasywaveBlind? blind = await AddBlind(id, name, device.Area).ConfigureAwait(false);
+            foreach (Subscription sub in device.Subscriptions)
+            {
+              var address = sub.Address ?? throw new Exception($"Device {id} has a subscription without address");
+              if (sub.CanSend)
+              {
+                blind.AddSubscription(address, sub.KeyCode, true);
+              }
+              else
+              {
+                var transmitter = _config.Devices.FirstOrDefault(d => d.Type == DeviceType.Transmitter && d.Id == address);
+                if (transmitter == null)
+                {
+                  throw new Exception($"Blind {id} has a subscription for a non-existing device {address}");
+                }
+                if (transmitter.Buttons.Contains(sub.KeyCode))
+                {
+                  blind.AddSubscription(address, sub.KeyCode);
+                }
+                else
+                {
+                  throw new Exception($"Blind {id} has a subscription for a non-existing button {sub.KeyCode} on transmitter {address}");
+                }
+              }
+            }
+            break;
+          }
           case DeviceType.Light:
           {
             var name = device.Name ?? $"Light {device.Name}";
@@ -116,10 +148,10 @@ namespace Easywave2Mqtt
               }
               else
               {
-                Device? transmitter = _config.Devices.FirstOrDefault(d => d.Type == DeviceType.Transmitter && d.Id == address);
-                if (transmitter == null)
+                var transmitter = _config.Devices.FirstOrDefault(d => d.Type == DeviceType.Transmitter && d.Id == address);
+                if (transmitter==null)
                 {
-                  throw new Exception($"Device {id} has a subscription for a non-existing device {address}");
+                  throw new Exception($"Light {id} has a subscription for a non-existing device {address}");
                 }
                 if (transmitter.Buttons.Contains(sub.KeyCode))
                 {
@@ -127,7 +159,7 @@ namespace Easywave2Mqtt
                 }
                 else
                 {
-                  throw new Exception($"Device {id} has a subscription for a non-existing button {sub.KeyCode} on transmitter {address}");
+                  throw new Exception($"Light {id} has a subscription for a non-existing button {sub.KeyCode} on transmitter {address}");
                 }
               }
             }
@@ -159,6 +191,17 @@ namespace Easywave2Mqtt
       await _bus.PublishAsync(new DeclareLight(id, switchName, area)).ConfigureAwait(false);
       AddDevice(newSwitch);
       return newSwitch;
+    }
+
+    private async Task<EasywaveBlind> AddBlind(string id, string? name, string? area)
+    {
+      var blindName = name ?? $"Blind {id}";
+      var newBlind = new EasywaveBlind(id, blindName, _loggerFactory.CreateLogger<EasywaveBlind>());
+      newBlind.StateChanged += HandleEasywaveBlindStateChanged;
+      newBlind.RequestSend += HandleEasywaveRequest;
+      await _bus.PublishAsync(new DeclareBlind(id, blindName, area)).ConfigureAwait(false);
+      AddDevice(newBlind);
+      return newBlind;  
     }
 
     private Task HandleEasywaveRequest(string address, char keyCode)
@@ -222,11 +265,24 @@ namespace Easywave2Mqtt
 
     private Task HandleEasywaveSwitchStateChanged(EasywaveSwitch sender)
     {
-      if (sender.State == State.On)
+      if (sender.State == SwitchState.On)
       {
         return _bus.PublishAsync(new EasywaveSwitchTurnedOn(sender.Id));
       }
       return _bus.PublishAsync(new EasywaveSwitchTurnedOff(sender.Id));
+    }
+
+    private Task HandleEasywaveBlindStateChanged(EasywaveBlind sender)
+    {
+      switch (sender.State)
+      {
+        case BlindState.Open:
+          return _bus.PublishAsync(new EasywaveBlindIsOpen(sender.Id));
+        case BlindState.Closed:
+          return _bus.PublishAsync(new EasywaveBlindIsClosed(sender.Id));
+        default:
+          throw new NotSupportedException($"unsupported EasywaveBlindState {sender.State}.");
+      }
     }
 
     #region Logging Methods

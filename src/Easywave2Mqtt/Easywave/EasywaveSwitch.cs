@@ -2,11 +2,10 @@
 
 namespace Easywave2Mqtt.Easywave
 {
-
   public partial class EasywaveSwitch : IEasywaveEventListener
   {
     private readonly ILogger<EasywaveSwitch> _logger;
-    private State _state = State.Off;
+    private SwitchState _state = SwitchState.Off;
 
     public EasywaveSwitch(string id, string name, bool isToggle, ILogger<EasywaveSwitch> logger)
     {
@@ -19,7 +18,7 @@ namespace Easywave2Mqtt.Easywave
     public string Name { get; set; }
     public bool IsToggle { get; }
 
-    public State State
+    public SwitchState State
     {
       get { return _state; }
       private set
@@ -49,16 +48,16 @@ namespace Easywave2Mqtt.Easywave
       {
         if (subscription.KeyCode == keyCode)
         { //Toggle the state
-          State = State == State.On ? State.Off : State.On;
+          State = State == SwitchState.On ? SwitchState.Off : SwitchState.On;
         }
       }
       else if (subscription.KeyCode == keyCode)
       { //Turn the switch on
-        State = State.On;
+        State = SwitchState.On;
       }
       else if (subscription.KeyCode == (char)(keyCode - 1))
       { //Turn the switch off
-        State = State.Off;
+        State = SwitchState.Off;
       }
       return Task.CompletedTask;
     }
@@ -74,18 +73,18 @@ namespace Easywave2Mqtt.Easywave
           {
             case "on":
               await RequestSend(trigger.Address, trigger.KeyCode).ConfigureAwait(false);
-              State = State.On;
+              State = SwitchState.On;
               break;
             case "off":
               await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
-              State = State.Off;
+              State = SwitchState.Off;
               break;
           }
         }
       }
     }
 
-    public event StateChanged? StateChanged;
+    public event SwitchStateChanged? StateChanged;
     public event RequestSend? RequestSend;
 
     public void AddSubscription(string address, char keyCode, bool canSend = false)
@@ -94,7 +93,7 @@ namespace Easywave2Mqtt.Easywave
     }
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Switch {Name} is turned {State}")]
-    public partial void LogStateSwitch(string name, State state);
+    public partial void LogStateSwitch(string name, SwitchState state);
   }
 
 }
