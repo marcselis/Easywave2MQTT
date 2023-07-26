@@ -11,3 +11,4 @@
 | 0.5.3 beta | Fix bug in detection mechanism for button repeats |
 | 0.6 | Automatically reconnect to MQTT server when connection breaks<br/>Persist state of lights in MQTT|
 | 0.7.0 | First try to add support for blinds |
+| 0.7.1 | Fix blind states |

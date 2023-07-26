@@ -19,7 +19,7 @@ namespace EldatEmulator
     {
       _bus = bus;
       _logger = logger;
-      _port = new SerialPort("COM2", 57600, Parity.None, 8, StopBits.One)
+      _port = new SerialPort("COM1", 57600, Parity.None, 8, StopBits.One)
       {
         Handshake = Handshake.None,
         DtrEnable = true,

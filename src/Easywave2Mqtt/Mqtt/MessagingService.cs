@@ -150,12 +150,12 @@ namespace Easywave2Mqtt.Mqtt
 
     private Task SendBlindOpen(EasywaveBlindIsOpen bl)
     {
-      return Send($"easywave2mqtt/{bl.Id}/state", "OPEN", true);
+      return Send($"easywave2mqtt/{bl.Id}/state", "open", true);
     }
 
     private Task SendBlindClosed(EasywaveBlindIsClosed bl)
     {
-      return Send($"easywave2mqtt/{bl.Id}/state", "CLOSED", true);
+      return Send($"easywave2mqtt/{bl.Id}/state", "closed", true);
     }
 
 
