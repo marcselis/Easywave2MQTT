@@ -1,39 +1,30 @@
 {
-    //These options get overriden by the addon options
-    "LogLevel": "Verbose",
-    "SerialPort": "/dev/ttyUSB0",
-    "EasywaveActionTimeout": "500",
-    "EasywaveRepeatTimeout": "80",
-    "MQTTServer": "192.168.1.13",
-    "MQTTPort": "1883",
-    "MQTTUser": "mqtt",
-    "MQTTPassword": "yourpassword",
     //These options need to be altered manually, until I figure out how to do it from Home Assistant.
     "Devices": [
-        //{
-        //    "Id": "171941",
-        //    "Type": "Transmitter",
-        //    "Name": "Afstandsbediening blinds",
-        //    "Area": "Living",
-        //    "Buttons": [ "A", "B", "C", "D" ]
-        //},
-        //{
-        //    "Id": "blinds",
-        //    "Type": "Blind",
-        //    "Name": "Blinds",
-        //    "Area": "Living",
-        //    "Subscriptions": [
-        //        {
-        //            "Address": "171941",
-        //            "KeyCode": "A"
-        //        },
-        //        {
-        //            "Address": "000002",
-        //            "KeyCode": "A",
-        //            "CanSend": "true"
-        //        }
-        //    ]
-        //}
+        {
+            "Id": "171941",
+            "Type": "Transmitter",
+            "Name": "Afstandsbediening blinds",
+            "Area": "Living",
+            "Buttons": [ "A", "B", "C", "D" ]
+        },
+        {
+            "Id": "blinds",
+            "Type": "Blind",
+            "Name": "Blinds",
+            "Area": "Living",
+            "Subscriptions": [
+                {
+                    "Address": "171941",
+                    "KeyCode": "A"
+                },
+                {
+                    "Address": "000002",
+                    "KeyCode": "A",
+                    "CanSend": "true"
+                }
+            ]
+        }
         //,
         //{
         //    "Id": "229ad6",
@@ -230,5 +221,14 @@
         //        }
         //    ]
         //}
-    ]
+    ],
+    "EasywaveActionTimeout": "500",
+    "EasywaveRepeatTimeout": "80",
+    //These options get overriden by the addon options
+    "LogLevel": "Trace",
+    "MQTTPassword": "mqtt",
+    "MQTTPort": "1883",
+    "MQTTServer": "192.168.1.10",
+    "MQTTUser": "mqtt",
+    "SerialPort": "/dev/ttyUSB0"
 }
