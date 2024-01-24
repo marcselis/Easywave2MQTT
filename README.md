@@ -61,7 +61,7 @@ This program has 4 main parts:
 
 It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some tinkering with a [config file](./addon/Easywave2MQTT/app/appsettings.json).  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistent.
 
-So, for now, the only way to do it, is to manually alter the contents of the `appsettings.json` file that is embedded in the `addon/Easywave2MQTT/app.tar.gz` archive.
+So, for now, the only way to do it, is to manually alter the contents of the `appsettings.json` file that is embedded in the `addon/Easywave2MQTT/app` folder.
 
 1. Open the [appsettings.json](./addon/Easywave2MQTT/app/appsettings.json) file in your favourite editor.
 2. Alter the `Devices` setting according to your setup.  My setup is available as a reference, to help you figure out what configuration is needed.  See the [Configuration](#configuration) for more detailed information.
