@@ -24,7 +24,7 @@ namespace InMemoryBus
     {
       Type type = typeof(T);
       var subscription = new Subscription<T>(this, handler);
-      ICollection<ISubscription> list = _subscriptions.GetOrAdd(type, _ => new List<ISubscription>());
+      ICollection<ISubscription> list = _subscriptions.GetOrAdd(type, _ => []);
       list.Add(subscription);
       return subscription;
     }
@@ -34,25 +34,16 @@ namespace InMemoryBus
       _ = _subscriptions[typeof(T)].Remove(subscription);
     }
 
-    private class Subscription<T> : ISubscription<T>
+    private sealed class Subscription<T>(Bus parent, Func<T, Task> handler) : ISubscription<T>
     {
-      private readonly Bus _parent;
-      private readonly Func<T, Task> _handler;
-
-      public Subscription(Bus parent, Func<T, Task> handler)
-      {
-        _parent = parent;
-        _handler = handler;
-      }
-
       public void Dispose()
       {
-        _parent.Remove<T>(this);
+        parent.Remove<T>(this);
       }
 
       public Task Handle(T message)
       {
-        return _handler.Invoke(message);
+        return handler.Invoke(message);
       }
     }
   }

@@ -1,8 +1,8 @@
 ﻿namespace Easywave2Mqtt.Events
 {
-  public record EasywaveSwitchTurnedOff
+  public record EasywaveBlindIsStopped
   {
-    public EasywaveSwitchTurnedOff(string id)
+    public EasywaveBlindIsStopped(string id)
     {
       Id = id;
     }

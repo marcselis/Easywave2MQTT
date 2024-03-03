@@ -5,19 +5,14 @@ using Timer = System.Timers.Timer;
 namespace Easywave2Mqtt.Easywave
 {
 
-  public partial class EasywaveButton : IEasywaveDevice, IDisposable
+  public sealed partial class EasywaveButton : IEasywaveDevice, IDisposable
   {
-    private static readonly int RepeatTimeout;
+    private static readonly int RepeatTimeout= Program.Settings!.EasywaveRepeatTimeout;
     private readonly ILogger<EasywaveButton> _logger;
     private readonly Timer _pressTimer;
     private readonly Stopwatch _stopwatch = new();
     private int _pressCounter;
     private int _repeat;
-
-    static EasywaveButton()
-    {
-      RepeatTimeout = Program.Settings!.EasywaveRepeatTimeout;
-    }
 
     internal EasywaveButton(string id, char keyCode, string name, string? area, ILogger<EasywaveButton> logger)
     {
@@ -45,6 +40,7 @@ namespace Easywave2Mqtt.Easywave
 
     public Task HandleCommand(string command)
     {
+      LogIgnoredCommand(Id, command);
       return Task.CompletedTask;
     }
 
@@ -193,6 +189,9 @@ namespace Easywave2Mqtt.Easywave
 
     [LoggerMessage(EventId = 12, Level = LogLevel.Debug, Message = "    Resetting repeat counter")]
     private partial void LogResetRepeatCounter();
+
+    [LoggerMessage(EventId=13, Level =LogLevel.Trace, Message ="    Button {Id} ignored command {Command}")]
+    private partial void LogIgnoredCommand(string id, string command);
   }
 
 }

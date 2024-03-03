@@ -1,20 +1,16 @@
 ﻿using System.Collections.ObjectModel;
+using Easywave2Mqtt.Mqtt;
 
 namespace Easywave2Mqtt.Easywave
 {
-  public partial class EasywaveBlind : IEasywaveEventListener
+  public partial class EasywaveBlind(string id, string name, ILogger<EasywaveBlind> logger) : IEasywaveEventListener
   {
-    private readonly ILogger<EasywaveBlind> _logger;
-    private BlindState _state = BlindState.Open;
+    private readonly ILogger<EasywaveBlind> _logger = logger;
+    private BlindState _state = BlindState.Unknown;
+    private Task? _timer = null;
+    private CancellationTokenSource? _cancellationTokenSource = null;
 
-    public EasywaveBlind(string id, string name, ILogger<EasywaveBlind> logger)
-    {
-      Id = id;
-      Name = name;
-      _logger=logger;
-    }
-
-    public string Name { get; set; }
+    public string Name { get; set; } = name;
     public bool IsToggle { get; }
 
     public BlindState State
@@ -32,9 +28,9 @@ namespace Easywave2Mqtt.Easywave
       }
     }
 
-    public Collection<EasywaveSubscription> Subscriptions { get; } = new();
+    public Collection<EasywaveSubscription> Subscriptions { get; } = [];
 
-    public string Id { get; set; }
+    public string Id { get; set; } = id;
 
     public event BlindStateChanged? StateChanged;
     public event RequestSend? RequestSend;
@@ -42,26 +38,47 @@ namespace Easywave2Mqtt.Easywave
     public async Task HandleCommand(string command)
     {
       EasywaveSubscription? trigger = Subscriptions.FirstOrDefault(sub => sub.CanSend);
-      if (trigger != null)
+      if (trigger == null)
       {
-        if (RequestSend != null)
+        return;
+      }
+      if (RequestSend != null)
+      {
+        switch (command)
         {
-          switch (command.ToLower())
-          {
-            case "open":
-              await RequestSend(trigger.Address, trigger.KeyCode).ConfigureAwait(false);
-              State = BlindState.Open;
-              break;
-            case "close":
-              await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
-              State = BlindState.Closed;
-              break;
-            case "stop":
-              await RequestSend(trigger.Address, (char)(trigger.KeyCode + 2)).ConfigureAwait(false);
-              break;
-          }
+          case Cover.OpenCommand:
+            await RequestSend(trigger.Address, trigger.KeyCode).ConfigureAwait(false);
+            DelayState(BlindState.Open);
+            State = BlindState.Opening;
+            break;
+          case Cover.CloseCommand:
+            await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
+            DelayState(BlindState.Closed);
+            State = BlindState.Closing;
+            break;
+          case Cover.StopCommand:
+            await RequestSend(trigger.Address, (char)(trigger.KeyCode + 2)).ConfigureAwait(false);
+            if (_cancellationTokenSource != null)
+            {
+              _cancellationTokenSource.Cancel();
+              _cancellationTokenSource.Dispose();
+            }
+            State = BlindState.Stopped;
+            break;
         }
       }
+
+    }
+
+    private void DelayState(BlindState newState)
+    {
+      if (_cancellationTokenSource != null)
+      {
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
+      }
+      _cancellationTokenSource = new CancellationTokenSource();
+      _timer = Task.Delay(10000, _cancellationTokenSource.Token).ContinueWith(_ => State=newState, _cancellationTokenSource.Token);
     }
 
     public Task HandleEvent(string address, char keyCode, string action)
@@ -76,6 +93,11 @@ namespace Easywave2Mqtt.Easywave
             break;
           case 'B':
             State = BlindState.Closed;
+            break;
+          case 'C':
+            State = BlindState.Stopped;
+            break;
+          default:
             break;
         }
       }

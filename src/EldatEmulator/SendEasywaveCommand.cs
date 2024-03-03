@@ -1,14 +1,8 @@
 ﻿namespace Tools.Messages
 {
-  public class SendEasywaveCommand
+  public class SendEasywaveCommand(string address, char keyCode)
   {
-    public SendEasywaveCommand(string address, char keyCode)
-    {
-      Address = address;
-      KeyCode = keyCode;
-    }
-
-    public string Address { get; }
-    public char KeyCode { get; }
+    public string Address { get; } = address;
+    public char KeyCode { get; } = keyCode;
   }
 }

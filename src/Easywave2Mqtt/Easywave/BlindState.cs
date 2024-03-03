@@ -3,7 +3,10 @@
   public enum BlindState
   {
     Unknown=0,
+    Opening,
     Open,
-    Closed
+    Closing,
+    Closed,
+    Stopped
   }
 }

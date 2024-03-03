@@ -1,9 +1,13 @@
 ﻿using System.Text.Json.Serialization;
+using Easywave2Mqtt.Easywave;
 
 namespace Easywave2Mqtt.Mqtt
 {
   public class Light
   {
+    public const string OnCommand = "ON";
+    public const string OffCommand = "OFF";
+
     [JsonPropertyName("unique_id")]
     public string Id { get; set; }
     [JsonPropertyName("name")]
@@ -12,6 +16,12 @@ namespace Easywave2Mqtt.Mqtt
     [JsonPropertyName("suggested_area")]
     public string? Area { get; set; }
 
+    [JsonPropertyName("qos")]
+    public uint QoS { get; set; } = 0;
+
+    [JsonPropertyName("retain")]
+    public bool Retain { get; set; } = true;
+
     [JsonPropertyName("state_topic")]
     public string StateTopic { get; set; }
 
@@ -19,9 +29,9 @@ namespace Easywave2Mqtt.Mqtt
     public string CommandTopic { get; set; }
 
     [JsonPropertyName("payload_on")]
-    public string PayloadOn { get; set; }
+    public string PayloadOn { get; set; } = OnCommand;
     [JsonPropertyName("payload_off")]
-    public string PayloadOff { get; set; }
+    public string PayloadOff { get; set; } = OffCommand;
 
     [JsonPropertyName("device")]
     public Device Device { get; set; }
@@ -39,8 +49,6 @@ namespace Easywave2Mqtt.Mqtt
       Area = area;
       StateTopic = $"easywave2mqtt/{id}/state";
       CommandTopic = $"mqtt2easywave/{id}/set";
-      PayloadOn = "ON";
-      PayloadOff = "OFF";
       Device = new Device(id, "Niko", "Easywave Switch", name);
       Availability = new Availability();
     }

@@ -6,7 +6,7 @@
             "DOTNET_ENVIRONMENT": "Development",
             "LOGLEVEL": "Verbose",
             "SERIALPORT": "COM1",
-            "MQTTServer": "192.168.1.13",
+            "MQTTServer": "192.168.1.10",
             "MQTTPassword": "ttqm"
         },
       "dotnetRunMessages": true

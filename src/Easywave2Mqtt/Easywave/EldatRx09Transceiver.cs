@@ -29,12 +29,12 @@ namespace Easywave2Mqtt.Easywave
       _logger = logger;
       _bus = bus;
       var portNames = SerialPort.GetPortNames();
-      if (!portNames.Any())
+      if (portNames.Length==0)
       {
         logger.LogError("No serial ports found!  Do you have the Eldat RX09 stick installed?");
         return;
       }
-      var port = settings.SerialPort ?? throw new Exception("SerialPort is not set in settings");
+      var port = settings.SerialPort ?? throw new InvalidConfigurationException("SerialPort is not set in settings");
       logger.LogInformation("Checking serial port {port}", port);
       if (!SerialPort.GetPortNames().Contains(port))
       {
@@ -123,7 +123,6 @@ namespace Easywave2Mqtt.Easywave
       _port!.WriteLine(message);
     }
 
-
     /// <summary>
     /// Closes the transceiver so that it stops listening.
     /// </summary>
@@ -141,7 +140,7 @@ namespace Easywave2Mqtt.Easywave
       _port.Dispose();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Concurrency", "PH_P008:Missing OperationCanceledException in Task", Justification = "Background service should gracefully stop when cancellation token is set")]
+    //[System.Diagnostics.CodeAnalysis.SuppressMessage("Concurrency", "PH_P008:Missing OperationCanceledException in Task", Justification = "Background service should gracefully stop when cancellation token is set")]
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
       LogServiceRunning();
@@ -170,7 +169,9 @@ namespace Easywave2Mqtt.Easywave
           }
         }
       }
-      catch (OperationCanceledException) { }
+      catch (OperationCanceledException) { 
+        //ignore
+      }
       LogServiceStopped();
     }
 

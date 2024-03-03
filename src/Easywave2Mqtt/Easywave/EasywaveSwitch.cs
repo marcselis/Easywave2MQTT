@@ -1,22 +1,15 @@
 ﻿using System.Collections.ObjectModel;
+using Easywave2Mqtt.Mqtt;
 
 namespace Easywave2Mqtt.Easywave
 {
-  public partial class EasywaveSwitch : IEasywaveEventListener
+  public partial class EasywaveSwitch(string id, string name, bool isToggle, ILogger<EasywaveSwitch> logger) : IEasywaveEventListener
   {
-    private readonly ILogger<EasywaveSwitch> _logger;
+    private readonly ILogger<EasywaveSwitch> _logger = logger;
     private SwitchState _state = SwitchState.Off;
 
-    public EasywaveSwitch(string id, string name, bool isToggle, ILogger<EasywaveSwitch> logger)
-    {
-      Id = id;
-      Name = name;
-      IsToggle = isToggle;
-      _logger = logger;
-    }
-
-    public string Name { get; set; }
-    public bool IsToggle { get; }
+    public string Name { get; set; } = name;
+    public bool IsToggle { get; } = isToggle;
 
     public SwitchState State
     {
@@ -33,11 +26,11 @@ namespace Easywave2Mqtt.Easywave
       }
     }
 
-    public Collection<EasywaveSubscription> Subscriptions { get; } = new();
+    public Collection<EasywaveSubscription> Subscriptions { get; } = [];
 
-    public string Id { get; set; }
+    public string Id { get; set; } = id;
 
-    public Task HandleEvent(string address, char keyCode, string _)
+    public Task HandleEvent(string address, char keyCode, string action)
     {
       EasywaveSubscription? subscription = Subscriptions.FirstOrDefault(s => s.Address == address);
       if (subscription == null)
@@ -65,23 +58,25 @@ namespace Easywave2Mqtt.Easywave
     public async Task HandleCommand(string command)
     {
       EasywaveSubscription? trigger = Subscriptions.FirstOrDefault(sub => sub.CanSend);
-      if (trigger != null)
+      if (trigger == null)
       {
-        if (RequestSend != null)
+        return;
+      }
+      if (RequestSend != null)
+      {
+        switch (command)
         {
-          switch (command)
-          {
-            case "on":
-              await RequestSend(trigger.Address, trigger.KeyCode).ConfigureAwait(false);
-              State = SwitchState.On;
-              break;
-            case "off":
-              await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
-              State = SwitchState.Off;
-              break;
-          }
+          case Light.OnCommand:
+            await RequestSend(trigger.Address, trigger.KeyCode).ConfigureAwait(false);
+            State = SwitchState.On;
+            break;
+          case Light.OffCommand:
+            await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
+            State = SwitchState.Off;
+            break;
         }
       }
+
     }
 
     public event SwitchStateChanged? StateChanged;

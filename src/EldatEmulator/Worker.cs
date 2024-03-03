@@ -6,34 +6,26 @@ using Tools.Messages;
 namespace EldatEmulator
 {
 
-  internal class Worker : BackgroundService
+  internal class Worker(IBus bus, ILogger<Worker> logger) : BackgroundService
   {
-    private readonly IBus _bus;
     private readonly Dictionary<ConsoleKey, Tuple<string, char>> _keys = new() { { ConsoleKey.T, new Tuple<string, char>("229ad6", 'A') } };
     private readonly Dictionary<ConsoleKey, string> _lampen = new() { { ConsoleKey.T, "terras" } };
-    private readonly ILogger<Worker> _logger;
-
-    public Worker(IBus bus, ILogger<Worker> logger)
-    {
-      _bus = bus;
-      _logger = logger;
-    }
 
     public override Task StartAsync(CancellationToken cancellationToken)
     {
-      _logger.LogInformation("Starting Worker");
+      logger.LogInformation("Starting Worker");
       return base.StartAsync(cancellationToken);
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-      _logger.LogInformation("Stopping Worker");
+      logger.LogInformation("Stopping Worker");
       return base.StopAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-      _logger.LogInformation("Running Worker");
+      logger.LogInformation("Running Worker");
       while (!stoppingToken.IsCancellationRequested)
       {
         if (!Console.KeyAvailable)
@@ -67,7 +59,7 @@ namespace EldatEmulator
             _ => throw new NotSupportedException($"Unsupported keycode {val}")
           };
         }
-        await _bus.PublishAsync(new SendEasywaveCommand(sw.Item1, val)).ConfigureAwait(false);
+        await bus.PublishAsync(new SendEasywaveCommand(sw.Item1, val)).ConfigureAwait(false);
       }
     }
 
@@ -75,7 +67,7 @@ namespace EldatEmulator
     {
       if (_lampen.TryGetValue(keyInfo.Key, out var val))
       {
-        await _bus.PublishAsync(new SendMqttMessage($"mqtt2easywave/{val}/switch", (keyInfo.Modifiers & ConsoleModifiers.Shift) > 0 ? "off" : "on")).ConfigureAwait(false);
+        await bus.PublishAsync(new SendMqttMessage($"mqtt2easywave/{val}/switch", (keyInfo.Modifiers & ConsoleModifiers.Shift) > 0 ? "off" : "on")).ConfigureAwait(false);
       }
     }
   }

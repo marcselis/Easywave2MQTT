@@ -19,7 +19,7 @@ namespace EldatEmulator
     {
       _bus = bus;
       _logger = logger;
-      _port = new SerialPort("COM1", 57600, Parity.None, 8, StopBits.One)
+      _port = new SerialPort("COM2", 57600, Parity.None, 8, StopBits.One)
       {
         Handshake = Handshake.None,
         DtrEnable = true,
@@ -68,31 +68,41 @@ namespace EldatEmulator
     private void ReadAndProcessLine()
     {
       if (_port.BytesToRead == 0)
+      {
         return;
+      }
+
       try
       {
         _logger.LogTrace("Reading line from port");
         var line = _port.ReadLine();
+        _logger.LogTrace("Received {Line}",line);
         switch (line)
         {
           case "GETP?":
+            _logger.LogTrace("-->GETP 80");
             _port.WriteLine("GETP 80");
             break;
           case "ID?":
+            _logger.LogTrace("-->ID 1234:4321");
             _port.WriteLine("ID 1234:4321");
             break;
         }
       }
       catch (TimeoutException)
       {
+        // Ignore
       }
       catch (IOException ex) when (ex.Message.StartsWith("This operation returned because the timeout period expired."))
-      { }
+      {
+        // Ignore
+      }
     }
 
     private Task SendEasywaveCommand(SendEasywaveCommand message)
     {
       var address = int.Parse(message.Address, NumberStyles.HexNumber);
+      _logger.LogTrace("Sent REC,{Address:x2},{KeyCode}",address, message.KeyCode);
       _port.WriteLine($"REC,{address:x2},{message.KeyCode}");
       return Task.CompletedTask;
     }
