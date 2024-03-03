@@ -4,7 +4,6 @@ using Serilog.Events;
 
 namespace Easywave2Mqtt.Configuration
 {
-  [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
   public class Settings
   {
     public LogEventLevel LogLevel { get; set; }

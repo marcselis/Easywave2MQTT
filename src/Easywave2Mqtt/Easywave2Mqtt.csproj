@@ -8,18 +8,16 @@
     <Platforms>AnyCPU</Platforms>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <Authors>Marc Selis</Authors>
+    <Description>This application bridges the Easywave &amp; MQTT worlds</Description>
+    <Copyright>©2022-2024 Marc Selis, License LGPL-2.1</Copyright>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" Version="2023.3.0">
-      <PrivateAssets>All</PrivateAssets>
-      <IncludeAssets></IncludeAssets>
-      <ExcludeAssets></ExcludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
-    <PackageReference Include="MQTTnet" Version="4.3.3.952" />
     <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.3.952" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />

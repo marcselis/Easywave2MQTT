@@ -29,7 +29,7 @@ namespace Easywave2Mqtt.Mqtt
     public string StateTopic { get; set; }
 
     [JsonPropertyName("qos")]
-    public uint QoS { get; set; } = 0;
+    public uint QoS { get; set; } = 1;
 
     [JsonPropertyName("retain")]
     public bool Retain { get; set; } = true;

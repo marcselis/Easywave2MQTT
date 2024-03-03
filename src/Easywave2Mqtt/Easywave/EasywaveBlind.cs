@@ -7,7 +7,9 @@ namespace Easywave2Mqtt.Easywave
   {
     private readonly ILogger<EasywaveBlind> _logger = logger;
     private BlindState _state = BlindState.Unknown;
+#pragma warning disable S4487 // Unread "private" fields should be removed
     private Task? _timer = null;
+#pragma warning restore S4487 // Unread "private" fields should be removed
     private CancellationTokenSource? _cancellationTokenSource = null;
 
     public string Name { get; set; } = name;
@@ -58,11 +60,7 @@ namespace Easywave2Mqtt.Easywave
             break;
           case Cover.StopCommand:
             await RequestSend(trigger.Address, (char)(trigger.KeyCode + 2)).ConfigureAwait(false);
-            if (_cancellationTokenSource != null)
-            {
-              _cancellationTokenSource.Cancel();
-              _cancellationTokenSource.Dispose();
-            }
+            StopDelay();
             State = BlindState.Stopped;
             break;
         }
@@ -72,13 +70,20 @@ namespace Easywave2Mqtt.Easywave
 
     private void DelayState(BlindState newState)
     {
-      if (_cancellationTokenSource != null)
+      StopDelay();
+      _cancellationTokenSource = new CancellationTokenSource();
+      _timer = Task.Delay(10000, _cancellationTokenSource.Token).ContinueWith(_ => State = newState, _cancellationTokenSource.Token);
+    }
+
+    private void StopDelay()
+    {
+      if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
       {
+        _timer = null;
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
+        _cancellationTokenSource = null;
       }
-      _cancellationTokenSource = new CancellationTokenSource();
-      _timer = Task.Delay(10000, _cancellationTokenSource.Token).ContinueWith(_ => State=newState, _cancellationTokenSource.Token);
     }
 
     public Task HandleEvent(string address, char keyCode, string action)

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Reflection;
 using Easywave2Mqtt.Configuration;
 using Easywave2Mqtt.Easywave;
 using Easywave2Mqtt.Events;
@@ -9,7 +8,7 @@ using InMemoryBus;
 namespace Easywave2Mqtt
 {
 
-  public sealed partial class Worker(IBus bus, IHostApplicationLifetime applicationLifetime, ILoggerFactory loggerFactory, Settings config) : BackgroundService
+  public sealed partial class Worker(IBus bus, ILoggerFactory loggerFactory, Settings config) : BackgroundService
   {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly ConcurrentDictionary<string, IEasywaveDevice> _devices = new();
@@ -68,33 +67,22 @@ namespace Easywave2Mqtt
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-      _cancellationTokenSource.Cancel();
       LogServiceStopping();
+      _cancellationTokenSource.Cancel();
       return base.StopAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
       LogServiceRunning();
-      try
+      using (bus.Subscribe<EasywaveTelegram>(HandleEasywaveEvent))
+      using (bus.Subscribe<MqttCommand>(HandleMqttCommand))
+      using (bus.Subscribe<MqttMessage>(HandleMqttMessage))
       {
-        using (bus.Subscribe<EasywaveTelegram>(HandleEasywaveEvent))
-        using (bus.Subscribe<MqttCommand>(HandleMqttCommand))
-        using (bus.Subscribe<MqttMessage>(HandleMqttMessage))
+        while (!_cancellationTokenSource.IsCancellationRequested)
         {
-          while (!_cancellationTokenSource.IsCancellationRequested)
-          {
-            await Task.Delay(1000, stoppingToken).ConfigureAwait(false);
-          }
+          await Task.Delay(100, CancellationToken.None).ConfigureAwait(false);
         }
-      }
-      catch(TaskCanceledException)
-      {
-        // Ignore
-      }
-      catch (OperationCanceledException) 
-      {
-        // Ignore
       }
       LogServiceStopped();
     }
@@ -112,7 +100,7 @@ namespace Easywave2Mqtt
             EasywaveBlind? blind = await AddBlind(id, name, device.Area).ConfigureAwait(false);
             foreach (Subscription sub in device.Subscriptions)
             {
-              var address = sub.Address ?? throw new InvalidConfigurationException($"Device {id} has a subscription without address");
+              var address = sub.Address ?? throw new InvalidConfigurationException($"Blind {id} has a subscription without address");
               if (sub.CanSend)
               {
                 blind.AddSubscription(address, sub.KeyCode, true);
@@ -138,7 +126,7 @@ namespace Easywave2Mqtt
             EasywaveSwitch? light = await AddLight(id, name, device.Area, device.IsToggle).ConfigureAwait(false);
             foreach (Subscription sub in device.Subscriptions)
             {
-              var address = sub.Address ?? throw new InvalidConfigurationException($"Device {id} has a subscription without address");
+              var address = sub.Address ?? throw new InvalidConfigurationException($"Light {id} has a subscription without address");
               if (sub.CanSend)
               {
                 light.AddSubscription(address, sub.KeyCode, true);
@@ -170,7 +158,7 @@ namespace Easywave2Mqtt
             break;
           }
           default:
-            throw new NotSupportedException($"Device {device.Id} has an unsupported type {device.Type}");
+            throw new InvalidConfigurationException($"Device {device.Id} has an unsupported type {device.Type}");
         }
       }
     }
@@ -282,7 +270,7 @@ namespace Easywave2Mqtt
 
     private Task HandleUnsupprtedState(string id, BlindState state)
     {
-      LogUnsupportedBlindState(id, state); 
+      LogUnsupportedBlindState(id, state);
       return Task.CompletedTask;
     }
 
@@ -312,10 +300,10 @@ namespace Easywave2Mqtt
     [LoggerMessage(EventId = 7, Level = LogLevel.Information, Message = "    Declaring light {Name} ({Id}:{IsToggle}) in {Area}")]
     public partial void LogLightDeclare(string id, string? name = "<<no name passed>>", string? area = "<<no area passed>>", bool isToggle = false);
 
-    [LoggerMessage(EventId=8, Level =LogLevel.Information, Message    = "    Declaring blind {Name} ({Id}) in {Area}")]
+    [LoggerMessage(EventId = 8, Level = LogLevel.Information, Message = "    Declaring blind {Name} ({Id}) in {Area}")]
     public partial void LogBlindDeclare(string id, string? name = "<<no name passed>>", string? area = "<<no area passed>>");
 
-    [LoggerMessage(EventId=9, Level =LogLevel.Warning, Message="Detected an unsupported state {State} for blind {Id}!")]
+    [LoggerMessage(EventId = 9, Level = LogLevel.Warning, Message = "Detected an unsupported state {State} for blind {Id}!")]
     public partial void LogUnsupportedBlindState(string id, BlindState state);
     #endregion
   }

@@ -5,6 +5,7 @@ using Easywave2Mqtt.Messages;
 using InMemoryBus;
 using MQTTnet;
 using MQTTnet.Client;
+using MQTTnet.Extensions.ManagedClient;
 using MQTTnet.Formatter;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
@@ -14,26 +15,14 @@ namespace Easywave2Mqtt.Mqtt
 
   public sealed partial class MessagingService : BackgroundService
   {
-    private readonly IMqttClient _client = new MqttFactory().CreateMqttClient();
-    private readonly MqttClientOptions _clientOptions;
+    private readonly IManagedMqttClient _client = new MqttFactory().CreateManagedMqttClient();
     private readonly IBus _bus;
     private readonly ILogger<MessagingService> _logger;
-    private readonly MqttTopicFilter _outgoing = new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build();
-    private readonly MqttTopicFilter _incoming = new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build();
-    private readonly MqttClientSubscribeOptions _subscribeOptions;
-    private bool _reconnecting = false;
 
     public MessagingService(ILogger<MessagingService> logger, IBus bus)
     {
       _logger = logger;
       _bus = bus;
-      _clientOptions = new MqttClientOptionsBuilder()
-        .WithClientId("Easywave2MQTT")
-        .WithTcpServer(Program.Settings!.MQTTServer, Program.Settings!.MQTTPort)
-        .WithCredentials(Program.Settings!.MQTTUser, Program.Settings!.MQTTPassword)
-        .WithProtocolVersion(MqttProtocolVersion.V500)
-        .Build();
-      _subscribeOptions = new MqttClientSubscribeOptionsBuilder().WithTopicFilter(_outgoing).WithTopicFilter(_incoming).Build();
     }
 
     public override void Dispose()
@@ -45,110 +34,68 @@ namespace Easywave2Mqtt.Mqtt
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
       LogServiceStart();
+      var clientOptions = new MqttClientOptionsBuilder()
+        .WithClientId("Easywave2MQTT")
+        .WithTcpServer(Program.Settings!.MQTTServer, Program.Settings!.MQTTPort)
+        .WithCredentials(Program.Settings!.MQTTUser, Program.Settings!.MQTTPassword)
+        .WithProtocolVersion(MqttProtocolVersion.V500)
+        .Build();
+      var managedClientOptions = new ManagedMqttClientOptionsBuilder().WithClientOptions(clientOptions).Build();
+      _client.ConnectedAsync += args => { LogClientReconnected(); return Task.CompletedTask; };
+      _client.ConnectingFailedAsync += args => { LogClientConnectionFailed(args.ConnectResult); return Task.CompletedTask; };
+      await _client.StartAsync(managedClientOptions).ConfigureAwait(false);
       _client.ApplicationMessageReceivedAsync += MessageHandler;
-      _client.DisconnectedAsync += DisconnectedHandler;
-      var connectResult = await ConnectAsync().ConfigureAwait(false);
-      Debug.Assert(_client.IsConnected);
-      if (connectResult.ResultCode != MqttClientConnectResultCode.Success)
-      {
-        LogClientConnectionFailed(connectResult.ResultCode);
-        return;
-      }
+      _client.SynchronizingSubscriptionsFailedAsync += SynchronizingSubscriptionsFailed;
 
-      var subscribeResult = await SubscribeAsync().ConfigureAwait(false);
-      foreach (var item in subscribeResult.Items)
-      {
-        if (item.ResultCode != MqttClientSubscribeResultCode.GrantedQoS1)
-        {
-          LogClientSubscriptionFailed(item.TopicFilter.Topic, item.ResultCode);
-        }
-      }
+      await _client.SubscribeAsync([new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build(), new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build()]);
       await base.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task DisconnectedHandler(MqttClientDisconnectedEventArgs arg)
+    private Task SynchronizingSubscriptionsFailed(ManagedProcessFailedEventArgs args)
     {
-      if (_reconnecting)
-      {
-        return;
-      }
-
-      _reconnecting = true;
-      LogClientConnectionBroken();
-
-      while (!_client.IsConnected)
-      {
-        try
-        {
-          _ = await ConnectAsync().ConfigureAwait(false);
-          _ = await SubscribeAsync().ConfigureAwait(false);
-          LogClientReconnected();
-          _reconnecting = false;
-          break;
-        }
-        catch (Exception ex)
-        {
-          LogClientReconnectFailed(ex.Message);
-          await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-        }
-      }
-    }
-
-    private Task<MqttClientConnectResult> ConnectAsync()
-    {
-      return _client.ConnectAsync(_clientOptions);
-    }
-
-    private Task<MqttClientSubscribeResult> SubscribeAsync()
-    {
-      return _client.SubscribeAsync(_subscribeOptions);
+      return Task.CompletedTask;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
       LogServiceStop();
+      // Stop handling incoming messages
       _client.ApplicationMessageReceivedAsync -= MessageHandler;
-      await _client.DisconnectAsync(new MqttClientDisconnectOptions { Reason = MqttClientDisconnectOptionsReason.NormalDisconnection, ReasonString = "Service stopping" }, cancellationToken).ConfigureAwait(false);
+      // Stop the ExecuteAsync task
       await base.StopAsync(cancellationToken).ConfigureAwait(false);
+      // Signal unavailability of all Easywave devices to Home Assistant
+      await Send("easywave2mqtt", "unavailable", true).ConfigureAwait(false);
+      // Wait max 10 seconds until all pending messages are sent
+      _ = SpinWait.SpinUntil(() => _client.PendingApplicationMessagesCount == 0, 10000);
+      // Close the MQTT connection
+      await _client.StopAsync(cleanDisconnect: true).ConfigureAwait(false);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
       LogServiceRunning();
       await Send("easywave2mqtt", "available", true).ConfigureAwait(false);
-      try
+      using (_bus.Subscribe<DeclareButton>(btn => DeclareButton(btn.Address, btn.KeyCode, btn.Name, btn.Area, btn.Count)))
+      using (_bus.Subscribe<DeclareLight>(sw => DeclareLight(sw.Id, sw.Name, sw.Area)))
+      using (_bus.Subscribe<DeclareBlind>(sw => DeclareCover(sw.Id, sw.Name, sw.Area)))
+      using (_bus.Subscribe<SendButtonPress>(btn => SendButtonPress(btn.Address, btn.KeyCode)))
+      using (_bus.Subscribe<SendButtonDoublePress>(btn => SendButtonDoublePress(btn.Address, btn.KeyCode)))
+      using (_bus.Subscribe<SendButtonTriplePress>(btn => SendButtonTriplePress(btn.Address, btn.KeyCode)))
+      using (_bus.Subscribe<SendButtonHold>(btn => SendButtonHold(btn.Address, btn.KeyCode)))
+      using (_bus.Subscribe<SendButtonRelease>(btn => SendButtonRelease(btn.Address, btn.KeyCode)))
+      using (_bus.Subscribe<EasywaveSwitchTurnedOn>(SendSwitchTurnedOn))
+      using (_bus.Subscribe<EasywaveSwitchTurnedOff>(SendSwitchTurnedOff))
+      using (_bus.Subscribe<EasywaveBlindIsOpening>(SendBlindOpening))
+      using (_bus.Subscribe<EasywaveBlindIsOpen>(SendBlindOpen))
+      using (_bus.Subscribe<EasywaveBlindIsClosing>(SendBlindClosing))
+      using (_bus.Subscribe<EasywaveBlindIsClosed>(SendBlindClosed))
+      using (_bus.Subscribe<EasywaveBlindIsStopped>(SendBlindStopped))
       {
-        using (_bus.Subscribe<DeclareButton>(btn => DeclareButton(btn.Address, btn.KeyCode, btn.Name, btn.Area, btn.Count)))
-        using (_bus.Subscribe<DeclareLight>(sw => DeclareLight(sw.Id, sw.Name, sw.Area)))
-        using (_bus.Subscribe<DeclareBlind>(sw => DeclareBlind(sw.Id, sw.Name, sw.Area)))
-        using (_bus.Subscribe<SendButtonPress>(btn => SendButtonPress(btn.Address, btn.KeyCode)))
-        using (_bus.Subscribe<SendButtonDoublePress>(btn => SendButtonDoublePress(btn.Address, btn.KeyCode)))
-        using (_bus.Subscribe<SendButtonTriplePress>(btn => SendButtonTriplePress(btn.Address, btn.KeyCode)))
-        using (_bus.Subscribe<SendButtonHold>(btn => SendButtonHold(btn.Address, btn.KeyCode)))
-        using (_bus.Subscribe<SendButtonRelease>(btn => SendButtonRelease(btn.Address, btn.KeyCode)))
-        using (_bus.Subscribe<EasywaveSwitchTurnedOn>(SendSwitchTurnedOn))
-        using (_bus.Subscribe<EasywaveSwitchTurnedOff>(SendSwitchTurnedOff))
-        using (_bus.Subscribe<EasywaveBlindIsOpening>(SendBlindOpening))
-        using (_bus.Subscribe<EasywaveBlindIsOpen>(SendBlindOpen))
-        using (_bus.Subscribe<EasywaveBlindIsClosing>(SendBlindClosing))
-        using (_bus.Subscribe<EasywaveBlindIsClosed>(SendBlindClosed))
-        using(_bus.Subscribe<EasywaveBlindIsStopped>(SendBlindStopped))
+        while (!stoppingToken.IsCancellationRequested)
         {
-          while (!stoppingToken.IsCancellationRequested)
-          {
-            await Task.Delay(100, stoppingToken).ConfigureAwait(false);
-          }
+          await Task.Delay(100, CancellationToken.None).ConfigureAwait(false);
         }
       }
-      catch(TaskCanceledException)
-      {
-        // Ignore
-      }
-      catch (OperationCanceledException)
-      {
-        // Ignore
-      }
-      await Send("easywave2mqtt", "unavailable", true).ConfigureAwait(false);
       LogServiceStopped();
     }
 
@@ -186,6 +133,7 @@ namespace Easywave2Mqtt.Mqtt
     {
       return Send($"easywave2mqtt/{bl.Id}/state", Cover.StoppedState, true);
     }
+
     private async Task MessageHandler(MqttApplicationMessageReceivedEventArgs arg)
     {
       LogTopicReceived(arg.ApplicationMessage.Topic, arg.ApplicationMessage.ConvertPayloadToString());
@@ -241,7 +189,7 @@ namespace Easywave2Mqtt.Mqtt
       return Send($"homeassistant/light/{id}/config", payload);
     }
 
-    private Task DeclareBlind(string id, string name, string? area)
+    private Task DeclareCover(string id, string name, string? area)
     {
       var sw = new Cover(id, name, area);
       var payload = JsonSerializer.Serialize(sw, MyJsonContext.Default.Cover);
@@ -281,17 +229,12 @@ namespace Easywave2Mqtt.Mqtt
     private async Task Send(string topic, string payload, bool retain = false)
     {
       LogTopicPublish(topic, payload);
-      MqttClientPublishResult publishResult = await _client.PublishAsync(new MqttApplicationMessageBuilder()
+      await _client.EnqueueAsync(new MqttApplicationMessageBuilder()
          .WithTopic(topic)
          .WithPayload(payload)
          .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
          .WithRetainFlag(retain)
          .Build());
-
-      if (publishResult.ReasonCode != MqttClientPublishReasonCode.Success)
-      {
-        LogPublishFailed(publishResult.ReasonCode, publishResult.ReasonString);
-      }
     }
 
     #region LoggingMethods
@@ -323,7 +266,7 @@ namespace Easywave2Mqtt.Mqtt
     private partial void LogClientReconnectFailed(string message);
 
     [LoggerMessage(EventId = 10, Level = LogLevel.Error, Message = "Failed to connect to MQTT broker: {Result}")]
-    private partial void LogClientConnectionFailed(MqttClientConnectResultCode result);
+    private partial void LogClientConnectionFailed(MqttClientConnectResult result);
 
     [LoggerMessage(EventId = 11, Level = LogLevel.Error, Message = "Failed to subscribe to topic {Topic}: {Result}")]
     private partial void LogClientSubscriptionFailed(string topic, MqttClientSubscribeResultCode result);

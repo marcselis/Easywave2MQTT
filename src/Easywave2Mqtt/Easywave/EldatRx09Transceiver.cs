@@ -68,11 +68,11 @@ namespace Easywave2Mqtt.Easywave
       return base.StartAsync(cancellationToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
       LogServiceStopping();
+      await base.StopAsync(cancellationToken);
       Close();
-      return base.StopAsync(cancellationToken);
     }
 
     /// <summary>
@@ -161,11 +161,17 @@ namespace Easywave2Mqtt.Easywave
           }
           catch (TimeoutException)
           {
-            await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
+            if (!stoppingToken.IsCancellationRequested)
+            {
+              await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
+            }
           }
           catch (IOException ex) when (ex.HResult == TimeoutResult)
           {
-            await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
+            if (!stoppingToken.IsCancellationRequested)
+            {
+              await Task.Delay(PauseTime, stoppingToken).ConfigureAwait(false);
+            }
           }
         }
       }

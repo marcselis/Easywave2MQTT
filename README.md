@@ -32,7 +32,9 @@ can be linked in 1- or 2-key mode:
 
 ### How to talk 'Easywave' using a computer?
 
-Eldat produces the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html). This USB stick emulates a serial port that a computer program can use to listen to Easywave traffic. By sending commands to the serial port, you can instruct the USB stick to send Easywave messages, but only using a limited number of addresses (0 to 64/128, depending on the stick model), requiring you to (also) link the transceiver to the receivers you want to control.
+Eldat produces the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html). This USB stick emulates a serial port that a computer program can use to listen to Easywave traffic. By sending commands to the serial port, you can instruct the USB stick to send Easywave messages, but only using a limited number of addresses (0 to 64/128, depending on the stick model), requiring you to (also) link the transceiver to the receivers you want to control.  This device is supported by the Linux kernel and Windows drivers are available as well.
+
+Niko sells the [USB RF interface for Niko Home Control](https://www.niko.eu/en/products/niko-home-control/products-on-bus-wiring/usb-rf-interface-for-niko-home-control-productmodel-niko-4f394869-c7ef-531b-ba63-5387f88d384a), but unfortunately that is not supported by the Linux kernel, nor are there any Windows drivers available.   The USB stick in that bundle seems an exact copy of the Eldat stick and I'm pretty sure it should be possible to get it to work in Linux by modifying the Eldat driver code to also recognize the USB device ID of the Niko stick.  If you really want to go that way [this StackExchange thread](https://raspberrypi.stackexchange.com/questions/78908/eldat-easywave-usbserial-device-not-detected-on-raspberrypi-3) might point you in the right direction, but don't look at me for help.
 
 ### Issues with the Easywave protocol & devices
 
@@ -43,7 +45,7 @@ In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigb
 - A typical Easywave wireless switch, like the [Niko 41-00001](https://www.niko.eu/en/products/wireless-controls/wireless-switch-with-two-buttons-productmodel-niko-fbacd5f6-94fc-5ce9-af7c-7394469b12c0) will send 2 to 4 repeated messages when a user presses a button.  This makes it difficult to predict in what state a receiver that is linked in 1-button mode will be after processing these messages, when looking at the messages being sent.  As a consequence, the current version does not support receivers in 1-button mode.
 - These repeated messages makes it also hard to detect a button being held and double- & tripple pressed. The addon tries to handle this with 2 settings.
   - **EasywaveRepeatTimeout**: any message received for the same button within this time (in milliseconds) is considered a repeated message and is ignored.  If the same message continues to be received after this timeout, the button is considered to be 'held'.
-  - **EasywaveActionTimeout**: number of milliseconds to wait until a button action is considered complete. 'Press' messages received within this time are considered to be repeated presses by the user.
+  - **EasywaveActionTimeout**: number of milliseconds to wait until a button action is considered complete. 'Press' messages received within this time are considered to be repeated presses by the user.  This gives this addon a nice feature: it can report double & triple presses on buttons, making it possible to trigger multiple types of actions in Home Assistant with one single button :smiley:.
 
 ## Architecture
 
@@ -51,10 +53,10 @@ In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigb
 
 This program has 4 main parts:
 
-- A **Easyweave service** that takes care of the Easywave communication using the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html).
+- A **Easyweave service** that takes care of the Easywave communication using the serial port that the Easywave USB stick exposes.
 - A **Messaging service** that takes care of communication over MQTT.
 - Some **Worker service** that communicates with the other 2 services to detect what is happening in the Easywave world and 
-  communicating it with [Home Assistant](https://www.home-assistant.io/) and vice-versa.
+  communicating it to MQTT and vice-versa.
 - Communication between these services is done through a custom-built and very rudimentary in-memory [message bus](./src/Tools/Bus.cs).
 
 ## Getting started
@@ -83,7 +85,7 @@ So, for now, the only way to do it, is to manually alter the contents of the `ap
 ### Debugging
 
 - Check that you have the following tools available:
-  - [.NET 7.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+  - [.NET 8.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
   - A code editor, like [Visual Studio Code](https://code.visualstudio.com/) or [Visual Studio](https://visualstudio.microsoft.com/), if you want to make changes.
 - Attach the [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) to your developer PC and make sure you have the drivers installed (can be downloaded from the page in the link).
   - Update the contents of the `appsettings.json` file.  See the [Configuration Section](#configuration) for more information.
@@ -135,25 +137,27 @@ The `Devices` section is too complicated to configure through the Addon configur
                                  //A/B = on/off on left-hand side when using a normal light switch cover.
                                  //C/D = on/off on right-hand side when using a normal light switch cover.
                                  //Niko also has special covers with 4 independent buttons.
+                                 //There are also Easywave remotes available with 3 to 8 buttons.  If you have one of
+                                 //those, you can use these as well, but be sure to add a character for each of them.
   }
   ```
 
 - **Optional**: Declare the receivers and the transmitter buttons you have them linked to.  Doing so will allow these receivers and their current state to be synchronized to Home Assistant.  
   If you want to make it possible to control your receivers from Home Assistant, you'll need to manually link them to an RX09 message and add that message as a subscription with `CanSend: "true"`.
 
-  A receiver is the actual device that switches the light.  Its configuration looks as follows:
+  A receiver is the actual device that responds to transmitters.  This plug-in currently supports `Light` & `Blind` devices.  Its configuration looks as follows:
 
    ``` json
   {
     "Id": "ktchn1",              //the unique ID of the receivers.  You can choose this yourself.
-    "Type": "Light",             //fixed value
+    "Type": "Light",             //declare this receiver as a Light in Home Assistant.
     "Name": "Kitchen light",     //name that you want to see displayed in Home Assistant.
     "Area": "Kitchen",           //the Home Assistant area where the receiver is located
      "Subscriptions": [          
-        {                        //the transmitter buttons that you have manually linked to the receiver
+        {                        //the transmitter button that you have manually linked to the receiver
           "Address": "2274e4",   //this is needed to make Home Assistant reflect the state of the device
-          "KeyCode": "C"         //when one of these buttons is pressed
-        },
+          "KeyCode": "C"         //when one of these buttons is pressed.  You only need to mention the button you used
+        },                       //when linking the transmitter with the receiver.  The other buttons are infered.
         {
           "Address": "22a4c1",   //addresses mentioned here should be declared as Transmitter device first!
           "KeyCode": "A"

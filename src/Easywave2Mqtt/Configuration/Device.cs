@@ -3,7 +3,6 @@ using JetBrains.Annotations;
 
 namespace Easywave2Mqtt.Configuration
 {
-  [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
   public class Device
   {
     public string? Id { get; set; }
