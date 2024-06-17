@@ -2,6 +2,7 @@
 {
   public enum SwitchState
   {
+    Unknown=0,
     Off,
     On
   }

@@ -6,7 +6,7 @@ namespace Easywave2Mqtt.Easywave
   public partial class EasywaveSwitch(string id, string name, bool isToggle, ILogger<EasywaveSwitch> logger) : IEasywaveEventListener
   {
     private readonly ILogger<EasywaveSwitch> _logger = logger;
-    private SwitchState _state = SwitchState.Off;
+    private SwitchState _state = SwitchState.Unknown;
 
     public string Name { get; set; } = name;
     public bool IsToggle { get; } = isToggle;
