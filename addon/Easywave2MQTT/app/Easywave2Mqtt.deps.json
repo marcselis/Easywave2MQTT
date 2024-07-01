@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v8.0": {
-      "Easywave2Mqtt/1.0.0": {
+      "Easywave2Mqtt/1.0.2": {
         "dependencies": {
           "InMemoryBus": "1.0.0",
           "MQTTnet.Extensions.ManagedClient": "4.3.3.952",
@@ -610,7 +610,7 @@
     }
   },
   "libraries": {
-    "Easywave2Mqtt/1.0.0": {
+    "Easywave2Mqtt/1.0.2": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

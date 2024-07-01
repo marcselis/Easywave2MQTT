@@ -1,5 +1,5 @@
 name: "Easywave2MQTT"
-version: "1.0.1"
+version: "1.0.2"
 slug: "easywave2mqtt"
 description: "Support Easywave devices (Buttons, Lights & Blinds) in Home Assistant using MQTT"
 arch:

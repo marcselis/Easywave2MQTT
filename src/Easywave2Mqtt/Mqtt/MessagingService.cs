@@ -42,7 +42,7 @@ namespace Easywave2Mqtt.Mqtt
         .Build();
       var managedClientOptions = new ManagedMqttClientOptionsBuilder().WithClientOptions(clientOptions).Build();
       _client.ConnectedAsync += args => { LogClientReconnected(); return Task.CompletedTask; };
-      _client.ConnectingFailedAsync += args => { LogClientConnectionFailed(args.ConnectResult); return Task.CompletedTask; };
+      _client.ConnectingFailedAsync += args => { LogClientConnectionFailed(args.ConnectResult, args.Exception.Message); return Task.CompletedTask; };
       await _client.StartAsync(managedClientOptions).ConfigureAwait(false);
       _client.ApplicationMessageReceivedAsync += MessageHandler;
       _client.SynchronizingSubscriptionsFailedAsync += SynchronizingSubscriptionsFailed;
@@ -265,8 +265,8 @@ namespace Easywave2Mqtt.Mqtt
     [LoggerMessage(EventId = 9, Level = LogLevel.Information, Message = "Failed to reconnect to MQTT broker: {Message}")]
     private partial void LogClientReconnectFailed(string message);
 
-    [LoggerMessage(EventId = 10, Level = LogLevel.Error, Message = "Failed to connect to MQTT broker: {Result}")]
-    private partial void LogClientConnectionFailed(MqttClientConnectResult result);
+    [LoggerMessage(EventId = 10, Level = LogLevel.Error, Message = "Failed to connect to MQTT broker: {Result}\nError: {Message}")]
+    private partial void LogClientConnectionFailed(MqttClientConnectResult result, string message);
 
     [LoggerMessage(EventId = 11, Level = LogLevel.Error, Message = "Failed to subscribe to topic {Topic}: {Result}")]
     private partial void LogClientSubscriptionFailed(string topic, MqttClientSubscribeResultCode result);

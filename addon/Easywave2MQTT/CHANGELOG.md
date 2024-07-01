@@ -2,6 +2,7 @@
 
 |Version|Changes|
 |-------|-------|
+| 1.0.2 | Extra logging of MQTT connection failures |
 | 1.0.1 | Set initial EasyWave switch state to `Unknown`, to allow processing of HomeAssistant retained commands and communicating the new state to HomeAssistant.|
 | 1.0.0 | Upgrade to .NET 8.<br/>Log declaration of Lights & Blinds<br/>Switch to managed MQTT client that automatically reconnects. |
 | 0.7.1 | Fix blind states |
