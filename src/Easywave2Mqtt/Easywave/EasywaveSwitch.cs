@@ -3,7 +3,7 @@ using Easywave2Mqtt.Mqtt;
 
 namespace Easywave2Mqtt.Easywave
 {
-  public partial class EasywaveSwitch(string id, string name, bool isToggle, ILogger<EasywaveSwitch> logger) : IEasywaveEventListener
+  internal sealed partial class EasywaveSwitch(string id, string name, bool isToggle, ILogger<EasywaveSwitch> logger) : IEasywaveEventListener
   {
     private readonly ILogger<EasywaveSwitch> _logger = logger;
     private SwitchState _state = SwitchState.Unknown;

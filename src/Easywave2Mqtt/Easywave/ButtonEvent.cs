@@ -1,4 +1,4 @@
 ﻿namespace Easywave2Mqtt.Easywave
 {
-  public delegate Task ButtonEvent(EasywaveButton button);
+  internal delegate Task ButtonEvent(EasywaveButton button);
 }

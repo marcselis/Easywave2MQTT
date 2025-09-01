@@ -2,7 +2,7 @@
 
 namespace Easywave2Mqtt.Mqtt
 {
-  public class Button
+  internal sealed class Button
   {
     [JsonPropertyName("unique_id")]
     public string Id { get; set; }
@@ -24,7 +24,9 @@ namespace Easywave2Mqtt.Mqtt
     [JsonPropertyName("availability")]
     public Availability Availability { get; set; }
 
+    #pragma warning disable IDE0290
     public Button(string id, char btn, string name, string? area, string eventName, int count)
+      #pragma warning restore IDE0290
     {
       Id = id + btn;
       Availability = new Availability();

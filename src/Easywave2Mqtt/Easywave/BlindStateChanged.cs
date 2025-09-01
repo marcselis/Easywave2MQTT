@@ -1,4 +1,4 @@
 ﻿namespace Easywave2Mqtt.Easywave
 {
-  public delegate Task BlindStateChanged(EasywaveBlind easywaveBlind);
+  internal delegate Task BlindStateChanged(EasywaveBlind easywaveBlind);
 }

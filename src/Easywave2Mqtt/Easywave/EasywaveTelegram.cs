@@ -1,6 +1,6 @@
 ﻿namespace Easywave2Mqtt.Easywave
 {
-  public record EasywaveTelegram
+  internal sealed record EasywaveTelegram
   {
     public static readonly EasywaveTelegram Empty = new(string.Empty, char.MinValue);
 

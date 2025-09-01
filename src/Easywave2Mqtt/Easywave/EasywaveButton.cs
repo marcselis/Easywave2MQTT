@@ -5,7 +5,7 @@ using Timer = System.Timers.Timer;
 namespace Easywave2Mqtt.Easywave
 {
 
-  public sealed partial class EasywaveButton : IEasywaveDevice, IDisposable
+  internal sealed partial class EasywaveButton : IEasywaveDevice, IDisposable
   {
     private static readonly int RepeatTimeout= Program.Settings!.EasywaveRepeatTimeout;
     private readonly ILogger<EasywaveButton> _logger;

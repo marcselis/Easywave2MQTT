@@ -2,7 +2,7 @@
 
 namespace Easywave2Mqtt.Mqtt
 {
-  public class Cover
+  internal sealed class Cover
   {
     public const string ClosingState = "closing";
     public const string ClosedState = "closed";
@@ -64,8 +64,11 @@ namespace Easywave2Mqtt.Mqtt
     [JsonPropertyName("availability")]
     public Availability Availability { get; set; }
 
+    /// <exception cref="ArgumentNullException"><paramref name="id" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">if the given <paramref name="id" /> is longer than 6 characters.</exception>
     public Cover(string id, string name, string? area)
     {
+            ArgumentNullException.ThrowIfNull(id);
       if (id.Length > 6)
       {
         throw new ArgumentOutOfRangeException(nameof(id), "Maximum size is 6 characters");

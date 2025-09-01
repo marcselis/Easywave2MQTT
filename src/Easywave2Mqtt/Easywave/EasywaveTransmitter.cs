@@ -2,25 +2,16 @@
 
 namespace Easywave2Mqtt.Easywave
 {
-  public partial class EasywaveTransmitter : IEasywaveDevice
+  internal sealed partial class EasywaveTransmitter(string id, string name, string? area, int count, ILogger<EasywaveTransmitter> logger) : IEasywaveDevice
   {
-    private readonly ILogger<EasywaveTransmitter> _logger;
+    private readonly ILogger<EasywaveTransmitter> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ConcurrentDictionary<char, EasywaveButton> _buttons = new();
 
-    public EasywaveTransmitter(string id, string name, string? area, int count, ILogger<EasywaveTransmitter> logger)
-    {
-      Id = id;
-      Name = name;
-      Area = area;
-      Count = count;
-      _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    public string Id { get; } = id;
+    public string Name { get; } = name;
+    public string? Area { get; } = area;
 
-    public string Id { get; }
-    public string Name { get; }
-    public string? Area { get; }
-
-    public int Count { get; }
+    public int Count { get; } = count;
 
     public Task HandleCommand(string command)
     {
@@ -43,8 +34,10 @@ namespace Easywave2Mqtt.Easywave
     [LoggerMessage(EventId = 14, Level = LogLevel.Trace, Message = "<--HandleButton {Id}:{KeyCode}")]
     public partial void LogHandleButtonEnd(string id, char keyCode);
 
+    /// <exception cref="ArgumentNullException"><paramref name="button" /> is <see langword="null" />.</exception>
     public void AddButton(EasywaveButton button)
     {
+      ArgumentNullException.ThrowIfNull(button);
       _buttons[button.KeyCode] = button;
     }
   }

@@ -8,7 +8,7 @@ using InMemoryBus;
 namespace Easywave2Mqtt
 {
 
-  public sealed partial class Worker(IBus bus, ILoggerFactory loggerFactory, Settings config) : BackgroundService
+  internal sealed partial class Worker(IBus bus, ILoggerFactory loggerFactory, Settings config) : BackgroundService
   {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly ConcurrentDictionary<string, IEasywaveDevice> _devices = new();
@@ -65,11 +65,11 @@ namespace Easywave2Mqtt
       await base.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
       LogServiceStopping();
-      _cancellationTokenSource.Cancel();
-      return base.StopAsync(cancellationToken);
+      await _cancellationTokenSource.CancelAsync().ConfigureAwait(false);
+      await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

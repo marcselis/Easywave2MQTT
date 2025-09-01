@@ -3,7 +3,7 @@ using Easywave2Mqtt.Easywave;
 
 namespace Easywave2Mqtt.Mqtt
 {
-  public class Light
+  internal sealed class Light
   {
     public const string OnCommand = "ON";
     public const string OffCommand = "OFF";
@@ -38,8 +38,11 @@ namespace Easywave2Mqtt.Mqtt
     [JsonPropertyName("availability")]
     public Availability Availability { get; set; }
 
+    /// <exception cref="ArgumentNullException"><paramref name="id" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">if the given <paramref name="id" /> is longer than 6 characters.</exception>
     public Light(string id, string name, string? area)
     {
+      ArgumentNullException.ThrowIfNull(id);
       if (id.Length > 6)
       {
         throw new ArgumentOutOfRangeException(nameof(id), "Maximum size is 6 characters");

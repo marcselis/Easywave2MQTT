@@ -1,12 +1,4 @@
 ﻿namespace Easywave2Mqtt.Events
 {
-  public record EasywaveBlindIsOpen
-  {
-    public EasywaveBlindIsOpen(string id)
-    {
-      Id = id;
-    }
-
-    public string Id { get; }
-  }
+  internal sealed record EasywaveBlindIsOpen(string Id);
 }

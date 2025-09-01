@@ -2,7 +2,7 @@
 
 namespace Easywave2Mqtt.Mqtt
 {
-  public class Device(string id, string manufacturer, string model, string name)
+  internal sealed class Device(string id, string manufacturer, string model, string name)
   {
     private const string Version = "Easywave2Mqtt 0.1 beta";
 

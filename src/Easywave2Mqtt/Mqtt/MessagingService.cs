@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Easywave2Mqtt.Events;
 using Easywave2Mqtt.Messages;
 using InMemoryBus;
@@ -7,13 +6,12 @@ using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Extensions.ManagedClient;
 using MQTTnet.Formatter;
-using MQTTnet.Packets;
 using MQTTnet.Protocol;
 
 namespace Easywave2Mqtt.Mqtt
 {
 
-  public sealed partial class MessagingService : BackgroundService
+  internal sealed partial class MessagingService : BackgroundService
   {
     private readonly IManagedMqttClient _client = new MqttFactory().CreateManagedMqttClient();
     private readonly IBus _bus;
@@ -23,6 +21,22 @@ namespace Easywave2Mqtt.Mqtt
     {
       _logger = logger;
       _bus = bus;
+      // Attach event handlers only once
+      _client.ConnectedAsync += async args =>
+      {
+        LogClientReconnected();
+        // Subscribe only after (re)connect
+        await _client.SubscribeAsync([
+          new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build(),
+          new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build()
+        ]).ConfigureAwait(false);
+        await Send("easywave2mqtt", "available", true).ConfigureAwait(false);
+
+      };
+      _client.ConnectingFailedAsync += args => { LogClientConnectionFailed(args.ConnectResult, args.Exception.Message); return Task.CompletedTask; };
+      _client.DisconnectedAsync += args => { LogClientConnectionBroken(); return Task.CompletedTask; };
+      _client.ApplicationMessageReceivedAsync += MessageHandler;
+      _client.SynchronizingSubscriptionsFailedAsync += SynchronizingSubscriptionsFailed;
     }
 
     public override void Dispose()
@@ -35,24 +49,22 @@ namespace Easywave2Mqtt.Mqtt
     {
       LogServiceStart();
       var clientOptions = new MqttClientOptionsBuilder()
-        .WithClientId("Easywave2MQTT")
+        .WithClientId("Easywave2MQTT2")
         .WithTcpServer(Program.Settings!.MQTTServer, Program.Settings!.MQTTPort)
         .WithCredentials(Program.Settings!.MQTTUser, Program.Settings!.MQTTPassword)
         .WithProtocolVersion(MqttProtocolVersion.V500)
         .Build();
-      var managedClientOptions = new ManagedMqttClientOptionsBuilder().WithClientOptions(clientOptions).Build();
-      _client.ConnectedAsync += args => { LogClientReconnected(); return Task.CompletedTask; };
-      _client.ConnectingFailedAsync += args => { LogClientConnectionFailed(args.ConnectResult, args.Exception.Message); return Task.CompletedTask; };
+      var managedClientOptions = new ManagedMqttClientOptionsBuilder()
+        .WithClientOptions(clientOptions)
+        .WithAutoReconnectDelay(TimeSpan.FromSeconds(5)) // Ensure auto-reconnect
+        .Build();
       await _client.StartAsync(managedClientOptions).ConfigureAwait(false);
-      _client.ApplicationMessageReceivedAsync += MessageHandler;
-      _client.SynchronizingSubscriptionsFailedAsync += SynchronizingSubscriptionsFailed;
-
-      await _client.SubscribeAsync([new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build(), new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build()]);
       await base.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private Task SynchronizingSubscriptionsFailed(ManagedProcessFailedEventArgs args)
     {
+      LogSubscriptionSynchronizationFailed(args.Exception?.Message);
       return Task.CompletedTask;
     }
 
@@ -159,13 +171,13 @@ namespace Easywave2Mqtt.Mqtt
             default:
               var bodyParts = body.Split('_');
               var buttonCode = bodyParts[1][0];
-              _logger.LogDebug("Received {Action} on {Address}:{ButtonCode}", bodyParts[2], address, buttonCode);
+              LogButtonActionReceived(bodyParts[2], address, buttonCode);
               await _bus.PublishAsync(new MqttMessage(address, buttonCode, bodyParts[2])).ConfigureAwait(false);
               break;
           }
           break;
         case "mqtt2easywave":
-          _logger.LogDebug("Received {Action} on {Address}", body, address);
+          LogActionReceived(body, address);
           await _bus.PublishAsync(new MqttCommand(address, body)).ConfigureAwait(false);
           break;
       }
@@ -226,15 +238,15 @@ namespace Easywave2Mqtt.Mqtt
       return Send($"easywave2mqtt/{id}/action", $"button_{btn}_hold");
     }
 
-    private async Task Send(string topic, string payload, bool retain = false)
+    private Task Send(string topic, string payload, bool retain = false)
     {
       LogTopicPublish(topic, payload);
-      await _client.EnqueueAsync(new MqttApplicationMessageBuilder()
-         .WithTopic(topic)
-         .WithPayload(payload)
-         .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
-         .WithRetainFlag(retain)
-         .Build());
+      return _client.EnqueueAsync(new MqttApplicationMessageBuilder()
+                                  .WithTopic(topic)
+                                  .WithPayload(payload)
+                                  .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+                                  .WithRetainFlag(retain)
+                                  .Build());
     }
 
     #region LoggingMethods
@@ -291,7 +303,15 @@ namespace Easywave2Mqtt.Mqtt
 
     [LoggerMessage(EventId = 25, Level = LogLevel.Error, Message = "Service stopped...")]
     private partial void LogServiceStopped();
+    // Add this LoggerMessage delegate to the #region LoggingMethods section:
+    [LoggerMessage(EventId = 26, Level = LogLevel.Debug, Message = "Received {Action} on {Address}:{ButtonCode}")]
+    private partial void LogButtonActionReceived(string action, string address, char buttonCode);
 
+    [LoggerMessage(EventId = 27, Level = LogLevel.Information, Message = "Action {Action} received on {Address}")]
+    private partial void LogActionReceived(string action, string address);
+
+    [LoggerMessage(EventId = 28, Level = LogLevel.Error, Message = "Subscription synchronization failed: {Exception}")]
+    private partial void LogSubscriptionSynchronizationFailed(string? exception);
     #endregion
   }
 

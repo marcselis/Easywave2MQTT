@@ -3,14 +3,14 @@ using Easywave2Mqtt.Mqtt;
 
 namespace Easywave2Mqtt.Easywave
 {
-  public partial class EasywaveBlind(string id, string name, ILogger<EasywaveBlind> logger) : IEasywaveEventListener
+  internal sealed partial class EasywaveBlind(string id, string name, ILogger<EasywaveBlind> logger) : IEasywaveEventListener
   {
     private readonly ILogger<EasywaveBlind> _logger = logger;
     private BlindState _state = BlindState.Unknown;
 #pragma warning disable S4487 // Unread "private" fields should be removed
-    private Task? _timer = null;
+    private Task? _timer;
 #pragma warning restore S4487 // Unread "private" fields should be removed
-    private CancellationTokenSource? _cancellationTokenSource = null;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     public string Name { get; set; } = name;
     public bool IsToggle { get; }
@@ -72,7 +72,7 @@ namespace Easywave2Mqtt.Easywave
     {
       StopDelay();
       _cancellationTokenSource = new CancellationTokenSource();
-      _timer = Task.Delay(10000, _cancellationTokenSource.Token).ContinueWith(_ => State = newState, _cancellationTokenSource.Token);
+        _timer = Task.Delay(10000, _cancellationTokenSource.Token).ContinueWith(_ => State = newState, _cancellationTokenSource.Token,TaskContinuationOptions.NotOnCanceled|TaskContinuationOptions.NotOnFaulted, TaskScheduler.Current);
     }
 
     private void StopDelay()

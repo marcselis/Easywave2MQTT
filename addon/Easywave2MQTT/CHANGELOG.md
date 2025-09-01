@@ -2,6 +2,7 @@
 
 |Version|Changes|
 |-------|-------|
+| 1.1.0 | Fix for MQTT reconnection issues due to MQTT Server restarts.  Home Assistant restarts still causes the devices that this plugin manages to be "unavailable", until the plugin is restarted. |
 | 1.0.2 | Extra logging of MQTT connection failures |
 | 1.0.1 | Set initial EasyWave switch state to `Unknown`, to allow processing of HomeAssistant retained commands and communicating the new state to HomeAssistant.|
 | 1.0.0 | Upgrade to .NET 8.<br/>Log declaration of Lights & Blinds<br/>Switch to managed MQTT client that automatically reconnects. |

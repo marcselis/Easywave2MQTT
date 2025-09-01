@@ -1,4 +1,4 @@
 ﻿namespace Easywave2Mqtt.Easywave
 {
-  public delegate Task SwitchStateChanged(EasywaveSwitch easywaveSwitch);
+  internal delegate Task SwitchStateChanged(EasywaveSwitch easywaveSwitch);
 }

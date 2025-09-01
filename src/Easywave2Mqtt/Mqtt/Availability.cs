@@ -2,7 +2,7 @@
 
 namespace Easywave2Mqtt.Mqtt
 {
-  public class Availability
+  internal sealed class Availability
   {
     [JsonPropertyName("payload_available")]
     public string PayloadAvailable { get; set; } = "available";

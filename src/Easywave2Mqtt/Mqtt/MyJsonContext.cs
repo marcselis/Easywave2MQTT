@@ -5,7 +5,7 @@ namespace Easywave2Mqtt.Mqtt
   [JsonSerializable(typeof(Light))]
   [JsonSerializable(typeof(Button))]
   [JsonSerializable(typeof(Cover))]
-  internal partial class MyJsonContext : JsonSerializerContext
+  internal sealed partial class MyJsonContext : JsonSerializerContext
   {
   }
 }

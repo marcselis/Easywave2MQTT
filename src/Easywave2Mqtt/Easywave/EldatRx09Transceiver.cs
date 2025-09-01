@@ -14,7 +14,7 @@ namespace Easywave2Mqtt.Easywave
   /// You need to have the Eldat driver installed in order for this to work.
   /// <see cref="https://www.eldat.de/produkte/_div/rx09e_USBTcEasywaveInstall_XP_Win7.zip"/>
   /// </remarks>
-  public sealed partial class EldatRx09Transceiver : BackgroundService
+  internal sealed partial class EldatRx09Transceiver : BackgroundService
   {
     private readonly ILogger _logger;
     private readonly IBus _bus;
@@ -24,25 +24,29 @@ namespace Easywave2Mqtt.Easywave
     private const int PauseTime = 100;
     private const int TimeoutResult = unchecked((int)0x800705B4);
 
+    /// <exception cref="InvalidConfigurationException">SerialPort is not set in settings</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="settings" /> is <see langword="null" />.</exception>
     public EldatRx09Transceiver(ILogger<EldatRx09Transceiver> logger, IBus bus, Settings settings)
     {
+      ArgumentNullException.ThrowIfNull(settings);
+
       _logger = logger;
       _bus = bus;
       var portNames = SerialPort.GetPortNames();
       if (portNames.Length==0)
       {
-        logger.LogError("No serial ports found!  Do you have the Eldat RX09 stick installed?");
+        LogNoSerialPortsFound();
         return;
       }
       var port = settings.SerialPort ?? throw new InvalidConfigurationException("SerialPort is not set in settings");
-      logger.LogInformation("Checking serial port {port}", port);
+      LogCheckingSerialPort(port);
       if (!SerialPort.GetPortNames().Contains(port))
       {
-        logger.LogError("Serial port {port} is not found!", port);
-        logger.LogInformation("List of serial ports found");
+        LogSerialPortNotFound(port);
+        LogSerialPortsFound();
         foreach (var portName in portNames)
         {
-          logger.LogInformation("   {port}", portName);
+          LogCheckingSerialPort(portName);
         }
         return;
       }
@@ -61,7 +65,7 @@ namespace Easywave2Mqtt.Easywave
       LogServiceStarting();
       if (_port == null)
       {
-        _logger.LogError("No port available, service not started");
+        LogNoSerialPortAvailable();
         return Task.CompletedTask;
       }
       Open();
@@ -71,7 +75,7 @@ namespace Easywave2Mqtt.Easywave
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
       LogServiceStopping();
-      await base.StopAsync(cancellationToken);
+      await base.StopAsync(cancellationToken).ConfigureAwait(false);
       Close();
     }
 
@@ -108,7 +112,7 @@ namespace Easywave2Mqtt.Easywave
 
     private Task SendEasywaveCommand(SendEasywaveCommand message)
     {
-      var address = int.Parse(message.Address, NumberStyles.HexNumber);
+      var address = int.Parse(message.Address, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
       if (address >= MaxAddress)
       {
         throw new ArgumentOutOfRangeException(nameof(message), $"Unable to send to address {address}, this transceiver only supports {MaxAddress} addresses");
@@ -184,11 +188,12 @@ namespace Easywave2Mqtt.Easywave
     public override void Dispose()
     {
       Close();
+      base.Dispose();
     }
 
     private EasywaveTelegram Parse(string line)
     {
-      EasywaveTelegram? result = EasywaveTelegram.Empty;
+      var result = EasywaveTelegram.Empty;
       LogMethodStart1(line);
       ReadOnlySpan<char> span = line.AsSpan();
       if (span[0..2].CompareTo("OK", StringComparison.Ordinal) == 0)
@@ -210,7 +215,7 @@ namespace Easywave2Mqtt.Easywave
       else if (span[0..4].CompareTo("GETP", StringComparison.Ordinal) == 0)
       {
         var addresses = new string(span[5..7]);
-        MaxAddress = int.Parse(addresses, NumberStyles.HexNumber);
+        MaxAddress = int.Parse(addresses, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
       }
       LogMethodEnd1(result.ToString());
       return result;
@@ -250,6 +255,24 @@ namespace Easywave2Mqtt.Easywave
     [LoggerMessage(EventId = 9, Level = LogLevel.Debug, Message = "Closing serial port {Port}")]
     private partial void LogClosePort(string port);
 
+    [LoggerMessage(EventId = 10, Level = LogLevel.Error, Message = "No serial ports found!  Do you have the Eldat RX09 stick installed?")]
+    private partial void LogNoSerialPortsFound();
+
+    [LoggerMessage(EventId = 11, Level = LogLevel.Error, Message = "No serial port available, service not started!")]
+    private partial void LogNoSerialPortAvailable();
+
+    [LoggerMessage(EventId = 12, Level = LogLevel.Error, Message = "Serial port {Port} is not found!")]
+    private partial void LogSerialPortNotFound(string port);
+
+    [LoggerMessage(EventId = 13, Level = LogLevel.Information, Message = "List of serial ports found")]
+    private partial void LogSerialPortsFound();
+
+    [LoggerMessage(EventId = 14, Level = LogLevel.Trace, Message = "   {Port}")]
+    private partial void LogPortName(string port);
+
+    [LoggerMessage(EventId = 15, Level = LogLevel.Information, Message = "Checking serial port {Port}")]
+    private partial void LogCheckingSerialPort(string port);
+
     [LoggerMessage(EventId = 98, Level = LogLevel.Trace, Message = "-->{Method}({Obj}) start")]
     private partial void LogMethodStart1(string obj, [CallerMemberName] string method = "");
 
@@ -258,7 +281,6 @@ namespace Easywave2Mqtt.Easywave
 
     [LoggerMessage(EventId = 100, Level = LogLevel.Trace, Message = "<--{Method} returns {Result}")]
     private partial void LogMethodEnd1(string result, [CallerMemberName] string method = "");
-
     #endregion
   }
 }

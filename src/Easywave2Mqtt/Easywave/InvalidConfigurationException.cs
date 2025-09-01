@@ -4,7 +4,9 @@ namespace Easywave2Mqtt.Easywave
 {
   [Serializable]
 #pragma warning disable S3925 // "ISerializable" should be implemented correctly
-  public class InvalidConfigurationException : Exception
+#pragma warning disable CA1515 // Consider making public types internal
+  public sealed class InvalidConfigurationException : Exception
+#pragma warning restore CA1515 // Consider making public types internal
 #pragma warning restore S3925 // "ISerializable" should be implemented correctly
   {
     public InvalidConfigurationException()
