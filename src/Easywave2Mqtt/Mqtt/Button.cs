@@ -22,14 +22,14 @@ namespace Easywave2Mqtt.Mqtt
     [JsonPropertyName("suggested_area")]
     public string? Area { get; set; }
     [JsonPropertyName("availability")]
-    public Availability Availability { get; set; }
+    public Availability[] Availability { get; set; }
 
     #pragma warning disable IDE0290
     public Button(string id, char btn, string name, string? area, string eventName, int count)
       #pragma warning restore IDE0290
     {
       Id = id + btn;
-      Availability = new Availability();
+      Availability = [new Availability()];
       AutomationType = "trigger";
       Type = $"button_{eventName}";
       SubType = $"button_{btn}";

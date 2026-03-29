@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Concurrent;
+using System.Text.Json;
 using Easywave2Mqtt.Events;
 using Easywave2Mqtt.Messages;
 using InMemoryBus;
@@ -16,6 +17,7 @@ namespace Easywave2Mqtt.Mqtt
     private readonly IManagedMqttClient _client = new MqttFactory().CreateManagedMqttClient();
     private readonly IBus _bus;
     private readonly ILogger<MessagingService> _logger;
+    private readonly ConcurrentDictionary<string, string> _discoveryCache = new();
 
     public MessagingService(ILogger<MessagingService> logger, IBus bus)
     {
@@ -28,10 +30,10 @@ namespace Easywave2Mqtt.Mqtt
         // Subscribe only after (re)connect
         await _client.SubscribeAsync([
           new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("easywave2mqtt/#").Build(),
-          new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build()
+          new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("mqtt2easywave/#").Build(),
+          new MqttTopicFilterBuilder().WithAtLeastOnceQoS().WithTopic("homeassistant/status").Build()
         ]).ConfigureAwait(false);
-        await Send("easywave2mqtt", "available", true).ConfigureAwait(false);
-
+        await RedeclareDevices().ConfigureAwait(false);
       };
       _client.ConnectingFailedAsync += args => { LogClientConnectionFailed(args.ConnectResult, args.Exception.Message); return Task.CompletedTask; };
       _client.DisconnectedAsync += args => { LogClientConnectionBroken(); return Task.CompletedTask; };
@@ -86,7 +88,6 @@ namespace Easywave2Mqtt.Mqtt
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
       LogServiceRunning();
-      await Send("easywave2mqtt", "available", true).ConfigureAwait(false);
       using (_bus.Subscribe<DeclareButton>(btn => DeclareButton(btn.Address, btn.KeyCode, btn.Name, btn.Area, btn.Count)))
       using (_bus.Subscribe<DeclareLight>(sw => DeclareLight(sw.Id, sw.Name, sw.Area)))
       using (_bus.Subscribe<DeclareBlind>(sw => DeclareCover(sw.Id, sw.Name, sw.Area)))
@@ -151,6 +152,13 @@ namespace Easywave2Mqtt.Mqtt
       LogTopicReceived(arg.ApplicationMessage.Topic, arg.ApplicationMessage.ConvertPayloadToString());
       arg.IsHandled = true;
       await arg.AcknowledgeAsync(CancellationToken.None).ConfigureAwait(false);
+      var body = arg.ApplicationMessage.ConvertPayloadToString();
+      if (arg.ApplicationMessage.Topic == "homeassistant/status" && body == "online")
+      {
+        LogHomeAssistantOnline();
+        await RedeclareDevices().ConfigureAwait(false);
+        return;
+      }
       var parts = arg.ApplicationMessage.Topic.Split("/");
       //Ignore uninteresting messages
       if (parts.Length < 3)
@@ -160,7 +168,6 @@ namespace Easywave2Mqtt.Mqtt
       var start = parts[0];
       var address = parts[1];
       var action = parts[2];
-      var body = arg.ApplicationMessage.ConvertPayloadToString();
       switch (start)
       {
         case "easywave2mqtt":
@@ -190,7 +197,9 @@ namespace Easywave2Mqtt.Mqtt
       {
         var button = new Button(id, btn, name, area, eventName, count);
         var payload = JsonSerializer.Serialize(button, MyJsonContext.Default.Button);
-        await Send($"homeassistant/device_automation/{id}/button_{btn}_{eventName}/config", payload).ConfigureAwait(false);
+        var topic = $"homeassistant/device_automation/{id}/button_{btn}_{eventName}/config";
+        _discoveryCache[topic] = payload;
+        await Send(topic, payload, true).ConfigureAwait(false);
       }
     }
 
@@ -198,14 +207,33 @@ namespace Easywave2Mqtt.Mqtt
     {
       var sw = new Light(id, name, area);
       var payload = JsonSerializer.Serialize(sw, MyJsonContext.Default.Light);
-      return Send($"homeassistant/light/{id}/config", payload);
+      var topic = $"homeassistant/light/{id}/config";
+      _discoveryCache[topic] = payload;
+      return Send(topic, payload, true);
     }
 
     private Task DeclareCover(string id, string name, string? area)
     {
       var sw = new Cover(id, name, area);
       var payload = JsonSerializer.Serialize(sw, MyJsonContext.Default.Cover);
-      return Send($"homeassistant/cover/{id}/config", payload);
+      var topic = $"homeassistant/cover/{id}/config";
+      _discoveryCache[topic] = payload;
+      return Send(topic, payload, true);
+    }
+
+    private async Task RedeclareDevices()
+    {
+      if (_discoveryCache.IsEmpty)
+      {
+        await Send("easywave2mqtt", "available", true).ConfigureAwait(false);
+        return;
+      }
+      LogRedeclareDevices(_discoveryCache.Count);
+      foreach (var (topic, payload) in _discoveryCache)
+      {
+        await Send(topic, payload, true).ConfigureAwait(false);
+      }
+      await Send("easywave2mqtt", "available", true).ConfigureAwait(false);
     }
 
     private Task SendButtonPress(string id, char btn)
@@ -312,6 +340,12 @@ namespace Easywave2Mqtt.Mqtt
 
     [LoggerMessage(EventId = 28, Level = LogLevel.Error, Message = "Subscription synchronization failed: {Exception}")]
     private partial void LogSubscriptionSynchronizationFailed(string? exception);
+
+    [LoggerMessage(EventId = 29, Level = LogLevel.Information, Message = "Home Assistant came online, re-declaring {Count} devices.")]
+    private partial void LogRedeclareDevices(int count);
+
+    [LoggerMessage(EventId = 30, Level = LogLevel.Information, Message = "Home Assistant came online.")]
+    private partial void LogHomeAssistantOnline();
     #endregion
   }
 

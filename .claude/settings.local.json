@@ -1,0 +1,6 @@
+{
+    "permissions": {
+        "allow": ["mcp__microsoft_learn"],
+        "deny": []
+    }
+}

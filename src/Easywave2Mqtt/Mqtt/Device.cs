@@ -4,7 +4,7 @@ namespace Easywave2Mqtt.Mqtt
 {
   internal sealed class Device(string id, string manufacturer, string model, string name)
   {
-    private const string Version = "Easywave2Mqtt 0.1 beta";
+    private const string Version = "Easywave2Mqtt 1.2.0";
 
     [JsonPropertyName("identifiers")]
     public string[] Identifiers { get; set; } = [$"easywave2mqtt_{id}"];

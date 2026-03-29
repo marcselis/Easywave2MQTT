@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"Learn.Microsoft.com": {
+			"url": "https://learn.microsoft.com/api/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

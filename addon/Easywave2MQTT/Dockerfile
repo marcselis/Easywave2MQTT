@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime:8.0
+FROM mcr.microsoft.com/dotnet/runtime:10.0
 # Copy add-on binaries
 ADD app /app
 # Switch to app folder

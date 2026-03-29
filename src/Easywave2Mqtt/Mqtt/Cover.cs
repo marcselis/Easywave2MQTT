@@ -62,7 +62,7 @@ namespace Easywave2Mqtt.Mqtt
     public Device Device { get; set; }
 
     [JsonPropertyName("availability")]
-    public Availability Availability { get; set; }
+    public Availability[] Availability { get; set; }
 
     /// <exception cref="ArgumentNullException"><paramref name="id" /> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentOutOfRangeException">if the given <paramref name="id" /> is longer than 6 characters.</exception>
@@ -79,7 +79,7 @@ namespace Easywave2Mqtt.Mqtt
       CommandTopic = $"mqtt2easywave/{id}/set";
       StateTopic = $"easywave2mqtt/{id}/state";
       Device = new Device(id, "Niko", "Easywave Blind", name);
-      Availability = new Availability();
+      Availability = [new Availability()];
     }
   }
 }
