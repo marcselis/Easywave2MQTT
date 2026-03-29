@@ -12,7 +12,7 @@ using Serilog.Events;
 namespace Easywave2Mqtt
 {
 
-  public static class Program
+  internal static class Program
   {
     public static Settings? Settings { get; set; }
 

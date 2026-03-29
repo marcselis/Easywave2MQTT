@@ -149,10 +149,16 @@ namespace Easywave2Mqtt.Mqtt
 
     private async Task MessageHandler(MqttApplicationMessageReceivedEventArgs arg)
     {
-      LogTopicReceived(arg.ApplicationMessage.Topic, arg.ApplicationMessage.ConvertPayloadToString());
-      arg.IsHandled = true;
+      if (_logger.IsEnabled(LogLevel.Debug))
+      {
+#pragma warning disable CA1873
+        LogTopicReceived(arg.ApplicationMessage.Topic, arg.ApplicationMessage.ConvertPayloadToString());
+#pragma warning restore CA1873
+      }
+
+        arg.IsHandled = true;
       await arg.AcknowledgeAsync(CancellationToken.None).ConfigureAwait(false);
-      var body = arg.ApplicationMessage.ConvertPayloadToString();
+      var body = arg.ApplicationMessage!.ConvertPayloadToString();
       if (arg.ApplicationMessage.Topic == "homeassistant/status" && body == "online")
       {
         LogHomeAssistantOnline();
