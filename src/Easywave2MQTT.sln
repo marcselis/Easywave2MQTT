@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Addon", "Addon", "{720CAAB9
 		..\addon\Easywave2MQTT\README.md = ..\addon\Easywave2MQTT\README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MQTTTester", "MQTTTester\MQTTTester.csproj", "{D8B4ADBC-9202-47F5-A1D4-68C1A93DC3F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,10 @@ Global
 		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FEF4B18-473D-4D88-A056-27C0CBA742F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8B4ADBC-9202-47F5-A1D4-68C1A93DC3F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8B4ADBC-9202-47F5-A1D4-68C1A93DC3F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8B4ADBC-9202-47F5-A1D4-68C1A93DC3F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8B4ADBC-9202-47F5-A1D4-68C1A93DC3F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

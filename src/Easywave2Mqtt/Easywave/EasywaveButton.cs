@@ -55,8 +55,8 @@ namespace Easywave2Mqtt.Easywave
     /// </summary>
     /// <remarks>
     ///     Easywave has a bad habit of sending up to 4 messages when a user presses a button.
-    ///     This method attempts to ignore those repeated messages and parse the incoming stream of button press messages to
-    ///     detect the users intention:
+    ///     This method attempts to ignore those repeated messages and parse the incoming stream of 
+    ///     button press messages to detect the users intention:
     ///     - A single press
     ///     - A double press
     ///     - A triple press

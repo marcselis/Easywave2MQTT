@@ -20,13 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
     <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.7.1207" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.15.0.120848">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.22.0.136894">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>

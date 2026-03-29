@@ -32,15 +32,10 @@ namespace Easywave2Mqtt
       }
     }
 
-    private async Task HandleMqttMessage(MqttMessage message)
+    private Task HandleMqttMessage(MqttMessage message)
     {
-      foreach (IEasywaveDevice device in _devices.Values)
-      {
-        if (device is IEasywaveEventListener eventListener)
-        {
-          await eventListener.HandleEvent(message.Address, message.KeyCode, message.Action).ConfigureAwait(false);
-        }
-      }
+      var tasks = _devices.Values.OfType<IEasywaveEventListener>().Select(device => device.HandleEvent(message.Address, message.KeyCode, message.Action));
+      return Task.WhenAll(tasks);
     }
 
     private async Task HandleEasywaveEvent(EasywaveTelegram telegram)

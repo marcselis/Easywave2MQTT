@@ -217,7 +217,7 @@ namespace Easywave2Mqtt.Easywave
         var addresses = new string(span[5..7]);
         MaxAddress = int.Parse(addresses, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
       }
-      LogMethodEnd1(result.ToString());
+      LogMethodEnd1(result);
       return result;
     }
 
@@ -280,7 +280,7 @@ namespace Easywave2Mqtt.Easywave
     public partial void LogMethodEnd([CallerMemberName] string method = "");
 
     [LoggerMessage(EventId = 100, Level = LogLevel.Trace, Message = "<--{Method} returns {Result}")]
-    private partial void LogMethodEnd1(string result, [CallerMemberName] string method = "");
+    private partial void LogMethodEnd1(object result, [CallerMemberName] string method = "");
     #endregion
   }
 }
