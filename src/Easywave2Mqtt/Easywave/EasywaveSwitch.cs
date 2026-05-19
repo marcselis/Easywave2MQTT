@@ -71,7 +71,14 @@ namespace Easywave2Mqtt.Easywave
             State = SwitchState.On;
             break;
           case Light.OffCommand:
-            await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
+            if (IsToggle)
+            {
+              await RequestSend(trigger.Address, trigger.KeyCode).ConfigureAwait(false);
+            }
+            else
+            {
+              await RequestSend(trigger.Address, (char)(trigger.KeyCode + 1)).ConfigureAwait(false);
+            }
             State = SwitchState.Off;
             break;
         }

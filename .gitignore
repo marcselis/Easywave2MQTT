@@ -352,3 +352,5 @@ MigrationBackup/
 
 !addon/**/*.*
 
+# JetBrains Rider
+.idea/

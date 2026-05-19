@@ -2,6 +2,7 @@
 
 |Version|Changes|
 |-------|-------|
+| 1.2.2 | Fix OneButton mode not working correctly with Lights |
 | 1.2.1 | Upgrade to .NET 10.<br/>Performance improvements.<br/>Subscribe to #homeassistant/status messages in MQTT to detect HA restarts. |
 | 1.1.0 | Fix for MQTT reconnection issues due to MQTT Server restarts.  Home Assistant restarts still causes the devices that this plugin manages to be "unavailable", until the plugin is restarted. |
 | 1.0.2 | Extra logging of MQTT connection failures |

@@ -156,7 +156,7 @@ namespace Easywave2Mqtt.Mqtt
 #pragma warning restore CA1873
       }
 
-        arg.IsHandled = true;
+      arg.IsHandled = true;
       await arg.AcknowledgeAsync(CancellationToken.None).ConfigureAwait(false);
       var body = arg.ApplicationMessage!.ConvertPayloadToString();
       if (arg.ApplicationMessage.Topic == "homeassistant/status" && body == "online")

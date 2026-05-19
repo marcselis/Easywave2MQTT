@@ -2,6 +2,10 @@
 using System.Timers;
 using Timer = System.Timers.Timer;
 
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Easywave2Mqtt.Tests")]
+
 namespace Easywave2Mqtt.Easywave
 {
 
