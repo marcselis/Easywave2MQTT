@@ -24,7 +24,7 @@ can be linked in 1- or 2-key mode:
   - 123456,A ==> ON
   - 123456,A ==> OFF
   - 123456,A ==> ON
-- In 2-key mode, the receiver switches on when it receives the press message for the button that was pressed during linkin, and it switches off when it receives a press message for the next button.
+- In 2-key mode, the receiver switches on when it receives the press message for the button that was pressed during linking, and it switches off when it receives a press message for the next button.
   Example:
   - 123456,A ==> ON
   - 123456,A ==> nothing happens
@@ -44,7 +44,7 @@ In contrast to other protocols (like [Zigbee](https://en.wikipedia.org/wiki/Zigb
 - When the receiver is a dimmer, there is no way of knowing on what level the light connected to the dimmer is burning or even if it is still burning at all, after sending a repeated stream of dim down messages.
   This makes makes it very difficult for this project to reflect the state of dimmable lights in the house in Home Assistant.  As a consequence, dimmable receivers are not supported and should be configured as normal switching receivers.
 - A typical Easywave wireless switch, like the [Niko 41-00001](https://www.niko.eu/en/products/wireless-controls/wireless-switch-with-two-buttons-productmodel-niko-fbacd5f6-94fc-5ce9-af7c-7394469b12c0) will send 2 to 4 repeated messages when a user presses a button.  This makes it difficult to predict in what state a receiver that is linked in 1-button mode will be after processing these messages, when looking at the messages being sent.  As a consequence, the current version does not support receivers in 1-button mode.
-- These repeated messages makes it also hard to detect a button being held and double- & tripple pressed. The addon tries to handle this with 2 settings.
+- These repeated messages makes it also hard to detect a button being held and double- & triple pressed. The addon tries to handle this with 2 settings.
   - **EasywaveRepeatTimeout**: any message received for the same button within this time (in milliseconds) is considered a repeated message and is ignored.  If the same message continues to be received after this timeout, the button is considered to be 'held'.
   - **EasywaveActionTimeout**: number of milliseconds to wait until a button action is considered complete. 'Press' messages received within this time are considered to be repeated presses by the user.  This gives this addon a nice feature: it can report double & triple presses on buttons, making it possible to trigger multiple types of actions in Home Assistant with one single button :smiley:.
 
@@ -62,15 +62,15 @@ This program has 4 main parts:
 
 ## Getting started
 
-It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some tinkering with a [config file](./addon/Easywave2MQTT/app/appsettings.json).  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistent.
+It is possible to get this Addon running in Home Assistant without any programming skills, but it does require some tinkering with a [config file](./addon/Easywave2MQTT/app/appsettings.json).  The reason for that is that this plugin requires knowledge of the Easywave devices in your house and I haven't yet been able to figure out how this configuration can be done from within Home Assistant.
 
 So, for now, the only way to do it, is to manually alter the contents of the `appsettings.json` file that is embedded in the `addon/Easywave2MQTT/app` folder.
 
 1. Open the [appsettings.json](./addon/Easywave2MQTT/app/appsettings.json) file in your favourite editor.
 2. Alter the `Devices` setting according to your setup.  My setup is available as a reference, to help you figure out what configuration is needed.  See the [Configuration](#configuration) for more detailed information.
 3. Copy the complete [Easywave2MQTT](./addon) folder from the `addon` subfolder to your [Home Assistant addons share](\\homeassistant\addons).  (You'll need to have the Samba addon running for this).
-4. Go to Home Assistant and open the Home Assitant Add-on Store.
-5. In the top righthand corner, press the Menu button (the one with the 3 dots).
+4. Go to Home Assistant and open the Home Assistant Add-on Store.
+5. In the top right-hand corner, press the Menu button (the one with the 3 dots).
 6. Choose `Check for updates`.
 7. The add-on should become visible after a few seconds under the topic `Local add-ons`.
 8. Click the `Easywave2MQTT` add-on and press `Install`. (This step might take a few minutes).
@@ -101,11 +101,58 @@ For now, this step requires some manual actions:
 3) Publish the Easywave2Mqtt project to the folder `addon/Easywave2MQTT/app`.  A publish profile is already created for this.
 4) Continue with step 3. from the [Getting Started section](#getting-started).
 
+### Pairing the RX09 to a Blind Receiver
+
+Use this procedure to link the RX09 USB transceiver to a blind that is already paired with an existing transmitter (e.g. the Eldat RT32). Once linked, you can add the RX09 address as a subscription with `CanSend: true` in the device configuration to allow Home Assistant to control the blind.
+
+1. On the **existing transmitter**, hold the **Stop** button for ~10 seconds until the blind moves briefly in response — this puts the receiver into pairing mode.
+2. Within **5 seconds**, press **Up** then **Down** on the existing transmitter. The blind should move up then down to confirm it recognised the existing transmitter.
+3. Within **5 seconds**, press **Up** on the **new transmitter** (the HA cover entity Open command via RX09). The blind should move up then down to confirm the new transmitter is linked.
+4. Repeat for each blind/channel.
+
+### Running as a Container
+
+If you run Home Assistant in a Docker environment (e.g. Home Assistant Container), add-ons are not available — those are exclusive to Home Assistant OS/Supervised installations. An alternative is to run Easywave2MQTT as its own container alongside your existing Docker stack.
+
+You will also need a standalone MQTT broker. [Mosquitto](https://github.com/eclipse-mosquitto/mosquitto) is a popular, lightweight choice.
+
+#### Dockerfile
+
+A [Dockerfile](./Dockerfile) is included at the root of the repository. Point your `docker-compose.yml` `build.context` at a directory that contains both the `Dockerfile` and the cloned repo folder (or adjust the `COPY` paths to match your layout).
+
+#### docker-compose snippet
+
+Add the following service to your `docker-compose.yml`. Adjust the USB device path to match your RX09 transceiver and mount your own `appsettings.json` with the correct MQTT and device settings:
+
+```yaml
+services:
+  easywave2mqtt:
+    container_name: easywave2mqtt
+    build:
+      context: ./Easywave2mqtt
+      dockerfile: dockerfile
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    devices:
+      - /dev/serial/by-id/usb-Silicon_Labs_USB_Transceiver_Easywave_00021352-if00-port0:/dev/ttyUSB0
+    volumes:
+      - ./Easywave2mqtt/appsettings.json:/app/appsettings.json:ro
+    group_add:
+      - dialout
+    networks:
+      - homeassistant
+```
+
+The `devices` mapping passes the USB transceiver through to the container. Using the stable `by-id` path avoids the device node changing across reboots. The `dialout` group and a non-root `user` are needed on most Linux hosts to access the serial port without running as root. Adjust the UID/GID (`950:950`) to match an unprivileged user on your host.
+
+See the [Configuration](#configuration) section for the full list of settings to put in your `appsettings.json`.
+
 ## Configuration
 
-The following settings from the [appsettings.json](./src/Easywave2Mqtt/appsettings.json) file are overriden by the addon configuration, and should not be altered when you are running it as a Home Assistant add-on.  These settings are needed when running on your [local development PC](#debugging).
+The following settings from the [appsettings.json](./src/Easywave2Mqtt/appsettings.json) file are overridden by the addon configuration, and should not be altered when you are running it as a Home Assistant add-on.  These settings are needed when running on your [local development PC](#debugging).
 
-- `LogLevel`: the level at wich the addon should log its progress.
+- `LogLevel`: the level at which the addon should log its progress.
 - `SerialPort`: the device where your [RX09 USB Transceiver](https://www.eldat.de/produkte/schnittstellen/rx09e_en.html) can be found.  (e.g. `COM1` in Windows, `/dev/ttyUSB0` in Linux)
 - `EasywaveActionTimeout` determines how many milliseconds to wait before concluding that an Easywave button action is finished.
 - `EasywaveRepeatTimeout` determines within how many milliseconds a new message is considered as a repeat.
@@ -158,7 +205,7 @@ The `Devices` section is too complicated to configure through the Addon configur
         {                        //the transmitter button that you have manually linked to the receiver
           "Address": "2274e4",   //this is needed to make Home Assistant reflect the state of the device
           "KeyCode": "C"         //when one of these buttons is pressed.  You only need to mention the button you used
-        },                       //when linking the transmitter with the receiver.  The other buttons are infered.
+        },                       //when linking the transmitter with the receiver.  The other buttons are inferred.
         {
           "Address": "22a4c1",   //addresses mentioned here should be declared as Transmitter device first!
           "KeyCode": "A"
